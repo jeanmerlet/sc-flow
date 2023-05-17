@@ -1,0 +1,21 @@
+# job script stuff
+*.err
+*.out
+*.sbatch
+*.lsf
+
+# data
+*.gz
+*.fastq
+*.bam
+*.mtx
+*.tsv
+*.txt
+*.csv
+
+# plots
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.svg
