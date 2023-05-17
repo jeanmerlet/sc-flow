@@ -1,7 +1,8 @@
-# job script stuff
+# jobs
 *.err
 *.out
 *.sbatch
+*.slurm
 *.lsf
 
 # data
@@ -15,6 +16,7 @@
 *.tar
 *.zip
 *.html
+*.bam
 
 # plots
 *.png
