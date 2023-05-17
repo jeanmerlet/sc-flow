@@ -36,3 +36,4 @@ mkdir -p plots
 mkdir -p preprocess
 mkdir -p seurat
 for dir in ./*/; do mkdir -p -- "$dir/logs"; done
+mkdir -p jobs

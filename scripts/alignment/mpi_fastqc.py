@@ -14,7 +14,7 @@ fastq_paths = [os.path.join(data_dir, path) for path in os.listdir(data_dir)]
 
 # run fastqc command, given a file
 def run_fastqc(path):
-    subprocess.run([fastqc_bin, '-t 16', f'--outdir={out_dir}', path])
+    subprocess.run([fastqc_bin, '--threads=16', f'--outdir={out_dir}', path])
 
 # distribute over processes
 comm = MPI.COMM_WORLD
