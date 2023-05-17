@@ -12,6 +12,8 @@
 *.tsv
 *.txt
 *.csv
+*.tar
+*.zip
 
 # plots
 *.png
