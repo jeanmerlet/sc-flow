@@ -31,15 +31,15 @@ printf \
 #SBATCH -e ./scripts/alignment/logs/fastqc.%%J.err
 
 module load python
-echo fastqc_bin $fastqc_bin
+echo fastqc_bin: $fastqc_bin
+echo
 
 srun -n $num_files python ./scripts/alignment/mpi_fastqc.py $fastqc_bin $data_dir $out_fastqc_dir
 rm $out_fastqc_dir/*.zip
 
 source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes
 
-multiqc $out_fastqc_dir
-mv $out_fastqc_dir/multiqc_report.html $out_fastqc_dir/fastqc_report.html" \
+srun -n 1 multiqc $out_fastqc_dir -n fastqc_report.html -o $out_fastqc_dir" \
 > $fastqc_job_script
 
 sbatch $fastqc_job_script
@@ -57,14 +57,14 @@ printf \
 #SBATCH -e ./scripts/alignment/logs/align.%%J.err
 
 module load python
-echo star_bin $star_bin
+echo star_bin: $star_bin
+echo
 
 srun -n $num_paired_files python ./scripts/alignment/mpi_align.py $star_bin $genome_dir $bc_whitelist $data_dir $out_align_dir $umi_len
 
 source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes
 
-srun -N 1 -n 1 multiqc $out_align_dir
-mv $out_align_dir/multiqc_report.html $out_alignqc_dir/align_report.html" \
+srun -n 1 multiqc $out_align_dir -n align_report.html -o $out_align_dir" \
 > $align_job_script
 
 sbatch $align_job_script

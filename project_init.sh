@@ -7,11 +7,11 @@
 mkdir -p data
 cd data
 mkdir -p bam
-mkdir -p count_matrices
+mkdir -p count-matrices
 mkdir -p de
 mkdir -p metadata
 mkdir -p raw
-mkdir -p seurat_objects
+mkdir -p seurat-objects
 # plots
 cd ..
 mkdir -p plots
