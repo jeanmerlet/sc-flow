@@ -27,6 +27,7 @@ def sc_star_align(fastq1, fastq2, prefix, umi_len):
                     '--soloType CB_UMI_Simple',
                     '--soloFeatures', 'Gene',
                     '--soloUMIdedup', '1MM_CR',
+                    '--soloStrand', 'Reverse',
                     '--soloUMIfiltering', 'MultiGeneUMI_CR',
                     '--clipAdapterType', 'CellRanger4',
                     '--outFilterScoreMin', '30',
