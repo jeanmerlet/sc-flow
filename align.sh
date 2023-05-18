@@ -7,9 +7,8 @@ bc_whitelist=$4
 umi_len=$5
 
 data_dir=./data/raw
-out_fastqc_dir=./qc/reads
 out_align_dir=./data/bam
-out_alignqc_dir=./qc/alignment
+out_qc_dir=./qc
 out_mtx_dir=./data/count-matrices
 fastqc_job_script=./scripts/jobs/fastqc.sbatch
 align_job_script=./scripts/jobs/align.sbatch
@@ -38,7 +37,7 @@ srun -n $num_files python ./scripts/alignment/mpi_fastqc.py $fastqc_bin $data_di
 
 source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes
 rm $out_fastqc_dir/*.html
-srun -N 1 -n 1 multiqc $out_fastqc_dir -n fastqc_report.html -o $out_fastqc_dir --no-data-dir
+srun -N 1 -n 1 multiqc $out_qc_dir -n fastqc_report.html -o $out_qc_dir --no-data-dir
 rm $out_fastqc_dir/*.zip" \
 > $fastqc_job_script
 
@@ -62,7 +61,7 @@ echo
 srun -n $num_paired_files python ./scripts/alignment/mpi_align.py $star_bin $genome_dir $bc_whitelist $data_dir $out_align_dir $umi_len
 
 source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes
-srun -N 1 -n 1 multiqc $out_align_dir -n align_report.html -o $out_alignqc_dir --no-data-dir
+srun -N 1 -n 1 multiqc $out_qc_dir -n align_report.html -o $out_qc_dir --no-data-dir
 mv $out_align_dir/*Log*.out $out_align_dir/logs
 mv $out_align_dir/*Solo.out $out_mtx_dir" \
 > $align_job_script

@@ -24,9 +24,6 @@ mkdir -p qc
 # qc
 cd ..
 mkdir -p qc
-cd qc
-mkdir -p alignment
-mkdir -p reads
 # scripts
 cd ..
 mkdir -p scripts
