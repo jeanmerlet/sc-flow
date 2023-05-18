@@ -7,6 +7,7 @@
 mkdir -p data
 cd data
 mkdir -p bam
+mkdir -p bam/logs
 mkdir -p count-matrices
 mkdir -p de
 mkdir -p metadata
