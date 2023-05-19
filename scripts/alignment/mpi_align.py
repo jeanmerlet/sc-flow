@@ -10,6 +10,7 @@ data_dir = sys.argv[4]
 out_dir = sys.argv[5]
 umi_len = sys.argv[6]
 
+#TODO: option for reverse stranded reads
 
 # alignment function
 def sc_star_align(fastq1, fastq2, prefix, umi_len):
@@ -27,7 +28,6 @@ def sc_star_align(fastq1, fastq2, prefix, umi_len):
                     '--soloType CB_UMI_Simple',
                     '--soloFeatures', 'Gene',
                     '--soloUMIdedup', '1MM_CR',
-                    '--soloStrand', 'Reverse',
                     '--soloUMIfiltering', 'MultiGeneUMI_CR',
                     '--clipAdapterType', 'CellRanger4',
                     '--outFilterScoreMin', '30',

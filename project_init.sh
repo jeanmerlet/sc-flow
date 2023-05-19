@@ -21,6 +21,7 @@ mkdir -p cells
 mkdir -p de
 mkdir -p genes
 mkdir -p qc
+mkdir -p qc/reads
 # qc
 cd ..
 mkdir -p qc
