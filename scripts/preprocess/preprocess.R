@@ -53,7 +53,8 @@ merge_all <- function(sample_dirs) {
             combined_seurat_obj <- merge(combined_seurat_obj, seurat_obj)
         }
     }
-	print(paste0("Sample combining runtime: ",round(end_time - start_time,2)," minutes"))
+	end_time <- Sys.time()
+	print(paste0("Sample combining runtime: ",round(end_time - start_time, 2)," minutes"))
     saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
     return(list(combined_seurat_obj, sample_ids))
 }
@@ -114,7 +115,7 @@ apply_integration <- function(obj) {
     DefaultAssay(obj) <- 'integrated'
     saveRDS(obj, file="./data/seurat-objects/integrated.rds")
 	end_time <- Sys.time()
-	print(paste0("Integration runtime: ",round(end_time - start_time,2)," minutes"))
+	print(paste0("Integration runtime: ",round(end_time - start_time, 2)," minutes"))
 }
 
 
@@ -129,7 +130,7 @@ apply_imputation <- function(obj) {
 	obj <- SetAssayData(object = obj,slot = "data",new.data = obj_alra)
 	saveRDS(obj, file = "./data/seurat-objects/imputed.rds")	
 	end_time <- Sys.time()
-	print(paste0("Imputation runtime: ",round(end_time - start_time,2)," minutes"))
+	print(paste0("Imputation runtime: ",round(end_time - start_time, 2)," minutes"))
 }
 
 
@@ -139,8 +140,6 @@ obj <- obj_data[[1]]
 sample_ids <- obj_data[[2]]
 pp_obj <- apply_rare_gene_filter(obj, sample_ids)
 pp_obj <- apply_mito_filter(pp_obj, 'mouse')
-pp_obj <- apply_upper_umi_cutoff(pp_obj, 1000)
-
-imputation_test <- apply_imputation(pp_obj)
-
-#integration_test <- apply_integration(pp_obj)
+pp_obj <- apply_upper_umi_cutoff(pp_obj)
+apply_imputation(pp_obj)
+#apply_integration(pp_obj)
