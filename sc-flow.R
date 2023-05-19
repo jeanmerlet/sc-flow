@@ -82,9 +82,53 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
 
 
 # jobscripts
-write_alignment_jobs <- function() {
+write_align_jobs <- function(raw_args) {
+script <- c(
+    "#!/bin/bash",
+    "",
+    "#SBATCH -A syb111",
+    "#SBATCH -N $num_paired_files",
+    "#SBATCH -t 6:00:00",
+    "#SBATCH -J fastqc",
+    "#SBATCH -o ./scripts/alignment/logs/fastqc.%J.out",
+    "#SBATCH -e ./scripts/alignment/logs/fastqc.%J.err",
+    "",
+    "module load python",
+    "echo fastqc_bin: $fastqc_bin",
+    "echo",
+    "srun -n $num_files python ./scripts/alignment/mpi_fastqc.py $fastqc_bin $data_dir $out_fastqc_dir",
+    "",
+    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes",
+    "srun -N 1 -n 1 multiqc $out_fastqc_dir -n fastqc_report.html -o $out_qc_dir --no-data-dir"
+    )
+    out_paths <- c("./scripts/jobs/fastqc.sbatch")
+    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
 
+script <- c(
+    "#!/bin/bash",
+    "",
+    "#SBATCH -A SYB111",
+    paste0("#SBATCH -N ", num_paired_files),
+    "#SBATCH -t 6:00:00",
+    "#SBATCH -J STAR_align",
+    "#SBATCH -o ./scripts/alignment/logs/align.%J.out",
+    "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
+    "",
+    "module load python",
+    paste0("echo star_bin: ", star_bin),
+    "echo",
+    paste0("srun -n ", num_paired_files, "python ./scripts/alignment/mpi_align.py ", raw_args),
+    "",
+    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes",
+    paste0("mv ", out_align_dir, "/*Log*.out", out_align_dir, "/logs"),
+    paste0("srun -N 1 -n 1 multiqc ", out_align_dir, "/logs -n align_report.html -o ", out_qc_dir, " --no-data-dir"),
+    paste0("mv ", out_align_dir, "/*Solo.out ", out_mtx_dir)
+    )
+    out_paths <- c(out_paths, "./scripts/jobs/align.sbatch")
+    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    return(out_paths)
 }
+
 
 #TODO: calculate time needed
 write_preprocess_job <- function(raw_args) {
@@ -101,10 +145,10 @@ script <- c(
     "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
     "",
     paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
-)
+    )
     out_path <- "./scripts/jobs/preprocess.sbatch"
-    write.table(script, file=out_path, sep = "\n",row.names = FALSE,col.names = FALSE, quote = FALSE)
-    return(out_path)
+    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    return(c(out_path))
 }
 
 
@@ -136,12 +180,14 @@ if (!run_r) {
     }
     raw_args <- paste0(raw_args, ' --run_r')
     if (workflow == 'align') {
-        job_path <- write_align_jobs()
+        job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
-        job_path <- write_preprocess_job(raw_args)
+        job_paths <- write_preprocess_job(raw_args)
     }
-    # run the job from the command line
-    submit_job(job_path)
+    # submit the job from the command line
+    for (path in job_paths) {
+        submit_job(path)
+    }
 } else {
     if (workflow == 'preprocess') {
         source('./scripts/preprocess/preprocess.R')
