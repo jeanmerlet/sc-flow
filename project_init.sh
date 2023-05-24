@@ -25,6 +25,8 @@ mkdir -p qc/reads
 # qc
 cd ..
 mkdir -p qc
+cd qc
+mkdir -p reads
 # scripts
 cd ..
 mkdir -p scripts
