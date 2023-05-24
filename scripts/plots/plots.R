@@ -29,6 +29,7 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes_string(x = xvar,y = yvar,color = condition,fill = condition)) + scale_fill_discrete(name = "Condition") + scale_color_discrete(name = "Condition")
 	} else {
+        
 		plot <- ggplot(data = metadata,aes(x = !!xvar,y = !!yvar))
 	}
 	plot <- plot +

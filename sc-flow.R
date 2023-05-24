@@ -287,7 +287,7 @@ if (!run_r) {
             xvar <- 'sample_ids'
             yvar <- 'Mito'
             violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
-                        plot_dir, plot_type, width, height)
+                        plot_dir, paste0(plot_type, '.png'), width, height)
         }
     }
 }
