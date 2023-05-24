@@ -26,13 +26,14 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	metadata[[yvar]] <- as.numeric(metadata[[yvar]])
-	xvar <- enquo(xvar)
-	yvar <- enquo(yvar)
+	#xvar <- enquo(xvar)
+	#yvar <- enquo(yvar)
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes_string(x = xvar,y = yvar,color = condition,fill = condition)) + scale_fill_discrete(name = "Condition") + scale_color_discrete(name = "Condition")
 	} else {
         
-		plot <- ggplot(data = metadata,aes(x = !!xvar,y = !!yvar))
+		#plot <- ggplot(data = metadata,aes(x = !!xvar,y = !!yvar))
+        plot <- ggplot(data=metadata, aes(x=!!sym(xvar), y=!!sym(yvar)))
 	}
 	plot <- plot +
 		geom_violin() +
