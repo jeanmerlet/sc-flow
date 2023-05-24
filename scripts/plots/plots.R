@@ -24,10 +24,10 @@ suppressPackageStartupMessages(library(scales))
 
 violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_dir,plot_name,width,height) {
 
-	xvar <- enquo(xvar)
-	yvar <- enquo(yvar)
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	metadata[[yvar]] <- as.numeric(metadata[[yvar]])
+	xvar <- enquo(xvar)
+	yvar <- enquo(yvar)
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes_string(x = xvar,y = yvar,color = condition,fill = condition)) + scale_fill_discrete(name = "Condition") + scale_color_discrete(name = "Condition")
 	} else {
