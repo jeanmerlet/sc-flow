@@ -6,6 +6,8 @@ suppressPackageStartupMessages({
 raw_args <- paste0(commandArgs(trailingOnly = TRUE), collapse=' ')
 
 mtx_dir <- './data/count-matrices/'
+plot_dir <- './plots/'
+meta_dir <- './data/metadata/'
 
 
 # Argument parser
@@ -24,17 +26,24 @@ option_list <- list(
         help='what kind of workflow to run'
     ),
     make_option(
+        c('--integrate'),
+        type='logical',
+        action='store_true',
+        default=FALSE,
+        help='whether or not to integrate'
+    ),
+    make_option(
         c('--plot_type'),
         type='character',
         default=NULL,
         help='what kind of plots to plot'
     ),
     make_option(
-        c('--integrate'),
+        c('--by_condition'),
         type='logical',
         action='store_true',
         default=FALSE,
-        help='whether or not to integrate'
+        help='by condition or not'
     ),
     make_option(
         c('--species'),
@@ -59,6 +68,48 @@ option_list <- list(
         type='integer',
         default=10,
         help='required number of cells expressing a gene to keep that gene'
+    ),
+    make_option(
+        c('--width'),
+        type='integer',
+        default=10,
+        help='plot width'
+    ),
+    make_option(
+        c('--height'),
+        type='integer',
+        default=5,
+        help='plot height'
+    ),
+#    make_option(
+#        c('--xvar'),
+#        type='character',
+#        default=NULL,
+#        help='xvar'
+#    ),
+#    make_option(
+#        c('--yvar'),
+#        type='character',
+#        default=NULL,
+#        help='yvar'
+#    ),
+    make_option(
+        c('--xlab'),
+        type='character',
+        default=NULL,
+        help='x axis label'
+    ),
+    make_option(
+        c('--ylab'),
+        type='character',
+        default=NULL,
+        help='y axis label'
+    ),
+    make_option(
+        c('--facet_var'),
+        type='character',
+        default=NULL,
+        help='subplots by factor'
     )
 )
 
@@ -71,6 +122,14 @@ mito_cutoff <- opt$mito_cutoff
 upper_umi_cutoff <- opt$upper_umi_cutoff
 rare_gene_cutoff <- opt$rare_gene_cutoff
 integrate <- opt$integrate
+plot_type <- opt$plot_type
+condition <- opt$by_condition
+#xvar <- opt$xvar
+#yvar <- opt$yvar
+xlab <- opt$xlab
+ylab <- opt$ylab
+width <- opt$width
+height <- opt$height
 
 
 # workflows
@@ -89,6 +148,12 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
 #source('./scripts/preprocess/alra.R')
 #run_preprocess(mtx_dir, 10, 0.10, 25000)
 #quit(save='no')
+
+
+plot <- function(plot_type, meta_path, xvar, yvar, xlab, ylab, facet_var, 
+                 condition, mito_cutoff, plot_dir, plot_name, width, height) {
+    
+}
 
 
 
@@ -172,16 +237,12 @@ submit_job <- function(path) {
 valid_workflow_list <- c('align', 'preprocess', 'plot')
 valid_plot_type_list <- c('qc')
 
+
 if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
     print(paste0('ERROR: missing or invalid workflow specified (', workflow, ').'))
     quit(save='no')
-} else {
-    if (workflow == 'plot') {
-        if (is.null(plot_type) | !(plot %in% valid_plot_type_list)) {
-            print(paste0('ERROR: missing or invalid plot type(s) specified (', plots, ').'))
-        }
-    }
 }
+
 
 if (!run_r) {
     if (is.null(species)) {
@@ -200,6 +261,8 @@ if (!run_r) {
         job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
         job_paths <- write_preprocess_job(raw_args)
+    } else if (workflow == 'plot') {
+        # make plotting job script
     }
     # submit the job from the command line
     for (path in job_paths) {
@@ -211,5 +274,20 @@ if (!run_r) {
         source('./scripts/preprocess/alra.R')
         run_preprocess(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff)
     } else if (workflow == 'cluster') {
+        print('clustering')
+    } else if (workflow == 'plot') {
+        if (is.null(plot_type) | !(plot_type %in% valid_plot_type_list)) {
+            print(paste0('ERROR: missing or invalid plot type specified (', plot_type, ').'))
+            quit(save='no')
+        }
+        source('./scripts/plots/plots.R')
+        if (plot_type == 'qc') {
+            meta_path <- paste0(meta_dir, 'cell_meta_imputed.tsv')
+            metadata <- read.table(meta_path, sep='\t')
+            xvar <- 'sample_ids'
+            yvar <- 'Mito'
+            violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
+                        plot_dir, plot_type, width, height)
+        }
     }
 }
