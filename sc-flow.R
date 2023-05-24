@@ -24,10 +24,10 @@ option_list <- list(
         help='what kind of workflow to run'
     ),
     make_option(
-        c('--species'),
+        c('--plots'),
         type='character',
         default=NULL,
-        help='species'
+        help='what kind of plots to plot'
     ),
     make_option(
         c('--integrate'),
@@ -35,6 +35,12 @@ option_list <- list(
         action='store_true',
         default=FALSE,
         help='whether or not to integrate'
+    ),
+    make_option(
+        c('--species'),
+        type='character',
+        default=NULL,
+        help='species'
     ),
     make_option(
         c('--mito_cutoff'),
@@ -158,12 +164,18 @@ submit_job <- function(path) {
 }
 
 
-valid_workflow_list <- c('align', 'preprocess')
+valid_workflow_list <- c('align', 'preprocess', 'plot')
+valid_plot_type_list <- c('qc')
 
 if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
-    print('ERROR: no species provided (--species) AND no mito cutoff provided (--mito_cutoff)')
-    print(paste0('ERROR: no or invalid job (', workflow, ') specified.'))
+    print(paste0('ERROR: missing or invalid workflow specified (', workflow, ').'))
     quit(save='no')
+} else {
+    if (workflow == 'plot') {
+        if (is.null(plot) | !(plot %in% valid_plot_type_list)) {
+            print(paste0('ERROR: missing or invalid plot type(s) specified (', plots, ').'))
+        }
+    }
 }
 
 if (!run_r) {
