@@ -21,7 +21,6 @@ data/
 *.rds
 
 # plots
-plots/
 *.png
 *.jpg
 *.jpeg
