@@ -24,7 +24,7 @@ option_list <- list(
         help='what kind of workflow to run'
     ),
     make_option(
-        c('--plots'),
+        c('--plot_type'),
         type='character',
         default=NULL,
         help='what kind of plots to plot'
@@ -85,6 +85,11 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
         apply_integration(preprocessed_obj)
     }
 }
+#source('./scripts/preprocess/preprocess.R')
+#source('./scripts/preprocess/alra.R')
+#run_preprocess(mtx_dir, 10, 0.10, 25000)
+#quit(save='no')
+
 
 
 # jobscripts
@@ -172,7 +177,7 @@ if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
     quit(save='no')
 } else {
     if (workflow == 'plot') {
-        if (is.null(plot) | !(plot %in% valid_plot_type_list)) {
+        if (is.null(plot_type) | !(plot %in% valid_plot_type_list)) {
             print(paste0('ERROR: missing or invalid plot type(s) specified (', plots, ').'))
         }
     }

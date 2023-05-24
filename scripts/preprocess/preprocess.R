@@ -6,7 +6,6 @@ suppressPackageStartupMessages({
     library(DropletUtils)
     library(Matrix)
     library(R.utils)
-    library(stringr)
 })
 
 
@@ -52,6 +51,8 @@ merge_all <- function(sample_dirs) {
 	end_time <- Sys.time()
 	print(paste0("Sample combining runtime: ",round(end_time - start_time, 2)," minutes"))
     saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
+    write.table(combined_seurat_obj@meta.data, file="./data/metadata/cell_meta_filtered.tsv", sep="\t")
+    write.table(combined_seurat_obj$RNA@meta.features, file="./data/metadata/gene_meta_filtered.tsv", sep="\t")
     merged_data <- list(combined_seurat_obj, sample_ids)
     names(merged_data) <- c('obj', 'sample_ids')
     return(merged_data)
@@ -88,7 +89,6 @@ apply_mito_filter <- function(obj, species, cutoff) {
 }
 
 
-#TODO: manual cutoff
 apply_upper_umi_cutoff <- function(obj, cutoff) {
     obj <- subset(obj, subset=(nCount_RNA < cutoff))
     return(obj)
@@ -105,6 +105,8 @@ apply_imputation <- function(obj) {
 	obj_alra <- Matrix(obj_alra,sparse = T)
 	obj <- SetAssayData(object = obj,slot = "data",new.data = obj_alra)
 	saveRDS(obj, file = "./data/seurat-objects/imputed.rds")	
+    write.table(obj@meta.data, file="./data/metadata/cell_meta_imputed.tsv", sep="\t")
+    write.table(obj$RNA@meta.features, file="./data/metadata/gene_meta_imputed.tsv", sep="\t")
 	end_time <- Sys.time()
 	print(paste0("Imputation runtime: ",round(end_time - start_time, 2)," minutes"))
 }
