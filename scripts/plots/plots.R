@@ -37,10 +37,10 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 	}
 	plot <- plot +
 		geom_violin() +
-		geom_hline(yintercept = mito_cutoff,color = "red") +
+		geom_hline(yintercept = mito_cutoff, color = "red") +
 		coord_flip() +
-		xlab(xlab) + 
-		ylab(ylab) +
+		xlab(ylab) + 
+		ylab(xlab) +
 		theme(legend.position = "bottom")
 		#theme(strip.text.y = element_text(angle = 0))
 	ggsave(paste0(plot_dir,plot_name),plot = plot,width = width,height = height)

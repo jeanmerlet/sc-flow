@@ -51,8 +51,6 @@ merge_all <- function(sample_dirs) {
 	end_time <- Sys.time()
 	print(paste0("Sample combining runtime: ",round(end_time - start_time, 2)," minutes"))
     saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
-    write.table(combined_seurat_obj@meta.data, file="./data/metadata/cell_meta_filtered.tsv", sep="\t")
-    write.table(combined_seurat_obj$RNA@meta.features, file="./data/metadata/gene_meta_filtered.tsv", sep="\t")
     merged_data <- list(combined_seurat_obj, sample_ids)
     names(merged_data) <- c('obj', 'sample_ids')
     return(merged_data)
@@ -75,15 +73,10 @@ apply_rare_gene_filter <- function(obj, sample_ids, cutoff) {
 #TODO: deal with intronic
 #TODO: implement manual mito cutoff setting
 # filter cells by mitochondrial gene expression
-apply_mito_filter <- function(obj, species, cutoff) {
-    if (is.null(cutoff)) {
-        if (species == 'mouse') {
-            cutoff <- 10
-        } else {
-            cutoff <- 5
-        }
-    }
+apply_mito_filter <- function(obj, cutoff) {
     obj[["Mito"]] <- PercentageFeatureSet(obj, pattern = "^MT-")
+    write.table(obj@meta.data, file="./data/metadata/cell_meta_filtered.tsv", sep="\t")
+    write.table(obj$RNA@meta.features, file="./data/metadata/gene_meta_filtered.tsv", sep="\t")
     obj <- subset(obj, subset=(Mito < cutoff))
     return(obj)
 }

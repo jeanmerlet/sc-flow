@@ -137,7 +137,7 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
     sample_dirs <- fetch_mtx_dirs(mtx_dir)
     merged_data <- merge_all(sample_dirs)
     preprocessed_obj <- apply_rare_gene_filter(merged_data$obj, merged_data$sample_ids, rare_gene_cutoff)
-    preprocessed_obj <- apply_mito_filter(preprocessed_obj, species, mito_cutoff)
+    preprocessed_obj <- apply_mito_filter(preprocessed_obj, mito_cutoff)
     preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)
     apply_imputation(preprocessed_obj)
     if (integrate) {
@@ -228,12 +228,34 @@ script <- c(
 }
 
 
+#TODO: calculate time needed
+write_plot_job <- function(raw_args) {
+script <- c(
+    "#!/bin/bash",
+    "",
+    "#SBATCH -A SYB111",
+    "#SBATCH -N 1",
+    "#SBATCH -t 1:00:00",
+    paste0("#SBATCH -J plot_", plot_type),
+    "#SBATCH -o ./scripts/plots/logs/plot.%J.out",
+    "#SBATCH -e ./scripts/plots/logs/plot.%J.err",
+    "",
+    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
+    "",
+    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    )
+    out_path <- paste0("./scripts/jobs/plot_", plot_type, ".sbatch")
+    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    return(c(out_path))
+}
+
 submit_job <- function(path) {
     command <- paste0('sbatch ', path)
     system(command)
 }
 
 
+### WORKFLOW ###
 valid_workflow_list <- c('align', 'preprocess', 'plot')
 valid_plot_type_list <- c('qc')
 
@@ -255,6 +277,13 @@ if (!run_r) {
             print('ERROR: no default mito cutoff for provided species (--mito_cutoff) and no mito cutoff provided')
             quit(save='no')
         }
+        if (is.null(mito_cutoff)) {
+            if (species == 'mouse') {
+                raw_args <- paste0(raw_args, ' --mito_cutoff 10')
+            } else {
+                raw_args <- paste0(raw_args, ' --mito_cutoff 5')
+            }
+        }
     }
     raw_args <- paste0(raw_args, ' --run_r')
     if (workflow == 'align') {
@@ -262,7 +291,7 @@ if (!run_r) {
     } else if (workflow == 'preprocess') {
         job_paths <- write_preprocess_job(raw_args)
     } else if (workflow == 'plot') {
-        # make plotting job script
+        job_paths <- write_plot_job(raw_args)
     }
     # submit the job from the command line
     for (path in job_paths) {
@@ -281,13 +310,29 @@ if (!run_r) {
             quit(save='no')
         }
         source('./scripts/plots/plots.R')
+        #if (is.null(mito_cutoff)) {
+        #    if (species == 'mouse') {
+        #        mito_cutoff <- 10
+        #    } else {
+        #        mito_cutoff <- 5
+        #    }
+        #}
         if (plot_type == 'qc') {
-            meta_path <- paste0(meta_dir, 'cell_meta_imputed.tsv')
-            metadata <- read.table(meta_path, sep='\t')
+            if (is.null(xlab)) {
+                xlab <- 'Mitochondrial expression (%)'
+            }
+            if (is.null(ylab)) {
+                ylab <- 'Sample IDs'
+            }
             xvar <- 'sample_ids'
             yvar <- 'Mito'
+            print(mito_cutoff)
+            meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
+            plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-', yvar, '.png')
+            metadata <- read.table(meta_path, sep='\t')
+            plot_dir <- paste0(plot_dir, plot_type, '/')
             violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
-                        plot_dir, paste0(plot_type, '.png'), width, height)
+                        plot_dir, plot_name, width, height)
         }
     }
 }
