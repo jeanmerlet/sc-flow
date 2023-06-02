@@ -26,13 +26,10 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	metadata[[yvar]] <- as.numeric(metadata[[yvar]])
-	#xvar <- enquo(xvar)
-	#yvar <- enquo(yvar)
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes_string(x = xvar,y = yvar,color = condition,fill = condition)) + scale_fill_discrete(name = "Condition") + scale_color_discrete(name = "Condition")
 	} else {
         
-		#plot <- ggplot(data = metadata,aes(x = !!xvar,y = !!yvar))
         plot <- ggplot(data=metadata, aes(x=!!sym(xvar), y=!!sym(yvar)))
 	}
 	plot <- plot +
@@ -50,13 +47,13 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 
 # Bar plot function
 
-bar_plot <- function(metadata,xvar,xlab,condition,plot_dir,plot_name,width,height) {
+bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,height) {
 
-	plot <- ggplot()
+	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes(x = xvar,fill = condition)) + facet_grid(.~condition,scales = "free") + scale_fill_discrete(name = "Condition")
 	} else {
-		plot <- plot + ggplot(data = metadata,aes(x = xvar,fill = condition))
+        plot <- ggplot(data=metadata, aes(x=!!sym(xvar)))
 	}
 	plot <- plot +
 		geom_bar() +
@@ -68,7 +65,7 @@ bar_plot <- function(metadata,xvar,xlab,condition,plot_dir,plot_name,width,heigh
 			axis.ticks.y = element_blank()
 		) +
 		xlab(xlab) +
-		ylab(ylab)
+        ylab(ylab)
 	ggsave(paste0(plot_dir,plot_name),plot = plot,width = width,height = height)
 
 }
@@ -77,17 +74,17 @@ bar_plot <- function(metadata,xvar,xlab,condition,plot_dir,plot_name,width,heigh
 # Density plot function
 
 density_plot <- function(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height) {
-
-	plot <- ggplot()
+    
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes(x = xvar,color = condition)) + scale_color_discrete(name = "Condition")
 	} else {
-		plot <- plot + ggplot(data = metadata,aes(x = xvar))
+        plot <- ggplot(data=metadata, aes(x=!!sym(xvar)))
 	}
 	plot <- plot +
 		geom_density() +
 		scale_x_log10(labels = comma) +
-		facet_wrap(facet_var~.) +
+        facet_wrap(as.formula(paste("~", facet_var))) +
+		#facet_wrap(!!sym(facet_var)~.) +
 		theme(strip.text.y = element_text(angle = 0)) +
 		xlab(xlab) +
 		ylab(ylab)

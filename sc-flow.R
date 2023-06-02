@@ -82,6 +82,12 @@ option_list <- list(
         help='required number of cells expressing a gene to keep that gene'
     ),
     make_option(
+        c('--min_uniq_gene_cutoff'),
+        type='integer',
+        default=350,
+        help='required number of uniq genes for a cell'
+    ),
+    make_option(
         c('--width'),
         type='integer',
         default=10,
@@ -135,6 +141,7 @@ species <- opt$species
 mito_cutoff <- opt$mito_cutoff
 upper_umi_cutoff <- opt$upper_umi_cutoff
 rare_gene_cutoff <- opt$rare_gene_cutoff
+min_uniq_gene_cutoff <- opt$min_uniq_gene_cutoff
 integrate <- opt$integrate
 plot_type <- opt$plot_type
 condition <- opt$by_condition
@@ -147,7 +154,7 @@ height <- opt$height
 
 
 # error functions
-check_species <- function () {
+check_species <- function (raw_args, mito_cutoff) {
     if (is.null(species)) {
         if (is.null(mito_cutoff)) {
             print('ERROR: no species provided (--species) AND no mito cutoff provided (--mito_cutoff)')
@@ -175,6 +182,7 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
     merged_data <- merge_all(sample_dirs)
     preprocessed_obj <- apply_rare_gene_filter(merged_data$obj, merged_data$sample_ids, rare_gene_cutoff)
     preprocessed_obj <- apply_mito_filter(preprocessed_obj, mito_cutoff)
+    preprocessed_obj <- apply_min_uniq_gene_filter(preprocessed_obj, min_uniq_gene_cutoff)
     preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)
     apply_imputation(preprocessed_obj)
     if (integrate) {
@@ -183,22 +191,33 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
 }
 
 
-plot_qc <- function(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
+plot_qc <- function(metadata, xvar, yvar, condition, mito_cutoff,
                     plot_dir, plot_name, width, height) {
-    if (is.null(xlab)) {
-        xlab <- 'Mitochondrial expression (%)'
-    }
-    if (is.null(ylab)) {
-        ylab <- 'Sample IDs'
-    }
     xvar <- 'sample_ids'
     yvar <- 'Mito'
     meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
-    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-', yvar, '.png')
     metadata <- read.table(meta_path, sep='\t')
     plot_dir <- paste0(plot_dir, plot_type, '/')
+    xlab <- 'Mitochondrial expression (%)'
+    ylab <- 'Sample IDs'
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', yvar, '_yvar-', xvar, '.png')
     violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
                 plot_dir, plot_name, width, height)
+    xlab <- 'Sample IDs'
+    ylab <- ''
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-total-cells.png')
+    bar_plot(metadata, xvar, xlab, ylab, condition, plot_dir, plot_name, width, height)
+    facet_var <- 'sample_ids'
+    xvar <- 'nCount_RNA'
+    xlab <- 'Total UMIs per cell'
+    ylab <- 'Density'
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
+    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
+    xvar <- 'nFeature_RNA'
+    xlab <- 'Unique Genes per cell'
+    ylab <- 'Density'
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
+    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
 }
 
 
@@ -305,8 +324,8 @@ script <- c(
     "#SBATCH -N 1",
     "#SBATCH -t 1:00:00",
     paste0("#SBATCH -J plot_", plot_type),
-    "#SBATCH -o ./scripts/plots/logs/plot.%J.out",
-    "#SBATCH -e ./scripts/plots/logs/plot.%J.err",
+    paste0("#SBATCH -o ./scripts/plots/logs/plot_", plot_type, ".%J.out"),
+    paste0("#SBATCH -e ./scripts/plots/logs/plot_", plot_type, ".%J.err"),
     "",
     "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
     "",
@@ -337,10 +356,10 @@ if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
 if (!run_r) {
     raw_args <- paste0(raw_args, ' --run_r')
     if (workflow == 'align') {
-        check_species()
+        raw_args <- check_species(raw_args, mito_cutoff)
         job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
-        check_species()
+        raw_args <- check_species(raw_args, mito_cutoff)
         job_paths <- write_preprocess_job(raw_args)
     } else if (workflow == 'impute') {
         job_paths <- write_impute_job(raw_args)
@@ -350,7 +369,7 @@ if (!run_r) {
             quit(save='no')
         }
         if (plot_type == 'qc') {
-            check_species()
+            raw_args <- check_species(raw_args, mito_cutoff)
         }
         job_paths <- write_plot_job(raw_args)
     }
@@ -374,7 +393,7 @@ if (!run_r) {
     } else if (workflow == 'plot') {
         source('./scripts/plots/plots.R')
         if (plot_type == 'qc') {
-            plot_qc(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
+            plot_qc(metadata, xvar, yvar, condition, mito_cutoff,
                     plot_dir, plot_name, width, height)
         }
     }

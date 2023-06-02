@@ -88,6 +88,12 @@ apply_mito_filter <- function(obj, cutoff) {
 }
 
 
+apply_min_uniq_gene_filter <- function(obj, cutoff) {
+    obj <- subset(obj, subset=(nFeature_RNA > cutoff))
+    return(obj)
+}
+
+
 apply_upper_umi_cutoff <- function(obj, cutoff) {
     obj <- subset(obj, subset=(nCount_RNA < cutoff))
     return(obj)
