@@ -181,9 +181,9 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
     sample_dirs <- fetch_mtx_dirs(mtx_dir)
     merged_data <- merge_all(sample_dirs)
     preprocessed_obj <- apply_rare_gene_filter(merged_data$obj, merged_data$sample_ids, rare_gene_cutoff)
-    preprocessed_obj <- apply_mito_filter(preprocessed_obj, mito_cutoff)
     preprocessed_obj <- apply_min_uniq_gene_filter(preprocessed_obj, min_uniq_gene_cutoff)
     preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)
+    preprocessed_obj <- apply_mito_filter(preprocessed_obj, mito_cutoff)
     apply_imputation(preprocessed_obj)
     if (integrate) {
         apply_integration(preprocessed_obj)
