@@ -9,6 +9,12 @@ suppressPackageStartupMessages({
 })
 
 
+load_seurat_obj <- function(path) {
+    obj <- readRDS(file=path)
+    return(obj)
+}
+
+
 #TODO: conditional Gene / GeneFull for introns
 #TODO: conditional filtered / raw
 # get a list of mtx dirs
@@ -89,7 +95,7 @@ apply_upper_umi_cutoff <- function(obj, cutoff) {
 
 
 #TODO: minutes vs seconds
-apply_imputation <- function(obj) {
+apply_imputation <- function(obj, out_dir=NULL) {
 	start_time <- Sys.time()
     obj <- NormalizeData(obj, normalization.method='LogNormalize', scale.factor=10000, verbose=FALSE)
 	alra_result <- alra(t(as.matrix(GetAssayData(object=obj, slot = "data"))))
@@ -97,9 +103,15 @@ apply_imputation <- function(obj) {
 	colnames(obj_alra) <- rownames(obj@meta.data)
 	obj_alra <- Matrix(obj_alra,sparse = T)
 	obj <- SetAssayData(object = obj,slot = "data",new.data = obj_alra)
-	saveRDS(obj, file = "./data/seurat-objects/imputed.rds")	
-    write.table(obj@meta.data, file="./data/metadata/cell_meta_imputed.tsv", sep="\t")
-    write.table(obj$RNA@meta.features, file="./data/metadata/gene_meta_imputed.tsv", sep="\t")
+    if (is.null(out_dir)) {
+        saveRDS(obj, file="./data/seurat-objects/imputed.rds")	
+        write.table(obj@meta.data, file="./data/metadata/cell_meta_imputed.tsv", sep="\t")
+        write.table(obj$RNA@meta.features, file="./data/metadata/gene_meta_imputed.tsv", sep="\t")
+    } else {
+        saveRDS(obj, file=paste0(out_dir, "imputed.rds"))
+        write.table(obj@meta.data, file=paste0(out_dir, "cell_meta_imputed.tsv"), sep="\t")
+        write.table(obj$RNA@meta.features, file=paste0(out_dir, "gene_meta_imputed.tsv"), sep="\t")
+    }
 	end_time <- Sys.time()
 	print(paste0("Imputation runtime: ",round(end_time - start_time, 2)," minutes"))
 }

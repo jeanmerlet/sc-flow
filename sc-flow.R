@@ -26,6 +26,18 @@ option_list <- list(
         help='what kind of workflow to run'
     ),
     make_option(
+        c('--obj_path'),
+        type='character',
+        default=NULL,
+        help='explicit path to a seurat object'
+    ),
+    make_option(
+        c('--out_impute_dir'),
+        type='character',
+        default=NULL,
+        help='explicit out dir for imputation'
+    ),
+    make_option(
         c('--integrate'),
         type='logical',
         action='store_true',
@@ -113,10 +125,12 @@ option_list <- list(
     )
 )
 
-opt <- parse_args(OptionParser(option_list=option_list))
 
+opt <- parse_args(OptionParser(option_list=option_list))
 run_r <- opt$run_r
 workflow <- opt$workflow
+out_impute_dir <- opt$out_impute_dir
+obj_path <- opt$obj_path
 species <- opt$species
 mito_cutoff <- opt$mito_cutoff
 upper_umi_cutoff <- opt$upper_umi_cutoff
@@ -132,6 +146,29 @@ width <- opt$width
 height <- opt$height
 
 
+# error functions
+check_species <- function () {
+    if (is.null(species)) {
+        if (is.null(mito_cutoff)) {
+            print('ERROR: no species provided (--species) AND no mito cutoff provided (--mito_cutoff)')
+            quit(save='no')
+        }
+    } else {
+        if (!(species %in% c('human', 'mouse')) & !(is.null(mito_cutoff))) {
+            print('ERROR: no default mito cutoff for provided species (--mito_cutoff) and no mito cutoff provided')
+            quit(save='no')
+        }
+        if (is.null(mito_cutoff)) {
+            if (species == 'mouse') {
+                raw_args <- paste0(raw_args, ' --mito_cutoff 10')
+            } else {
+                raw_args <- paste0(raw_args, ' --mito_cutoff 5')
+            }
+        }
+    }
+}
+
+
 # workflows
 run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff) {
     sample_dirs <- fetch_mtx_dirs(mtx_dir)
@@ -144,20 +181,28 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
         apply_integration(preprocessed_obj)
     }
 }
-#source('./scripts/preprocess/preprocess.R')
-#source('./scripts/preprocess/alra.R')
-#run_preprocess(mtx_dir, 10, 0.10, 25000)
-#quit(save='no')
 
 
-plot <- function(plot_type, meta_path, xvar, yvar, xlab, ylab, facet_var, 
-                 condition, mito_cutoff, plot_dir, plot_name, width, height) {
-    
+plot_qc <- function(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
+                    plot_dir, plot_name, width, height) {
+    if (is.null(xlab)) {
+        xlab <- 'Mitochondrial expression (%)'
+    }
+    if (is.null(ylab)) {
+        ylab <- 'Sample IDs'
+    }
+    xvar <- 'sample_ids'
+    yvar <- 'Mito'
+    meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-', yvar, '.png')
+    metadata <- read.table(meta_path, sep='\t')
+    plot_dir <- paste0(plot_dir, plot_type, '/')
+    violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
+                plot_dir, plot_name, width, height)
 }
 
 
-
-# jobscripts
+### jobscripts ###
 write_align_jobs <- function(raw_args) {
 script <- c(
     "#!/bin/bash",
@@ -229,6 +274,29 @@ script <- c(
 
 
 #TODO: calculate time needed
+write_impute_job <- function(raw_args) {
+script <- c(
+    "#!/bin/bash",
+    "",
+    "#SBATCH -A SYB111",
+    "#SBATCH -N 1",
+    "#SBATCH -t 2:00:00",
+    "#SBATCH -J impute",
+    "#SBATCH -p gpu",
+    "#SBATCH -o ./scripts/preprocess/logs/impute.%J.out",
+    "#SBATCH -e ./scripts/preprocess/logs/impute.%J.err",
+    "",
+    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
+    "",
+    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    )
+    out_path <- "./scripts/jobs/impute.sbatch"
+    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    return(c(out_path))
+}
+
+
+#TODO: calculate time needed
 write_plot_job <- function(raw_args) {
 script <- c(
     "#!/bin/bash",
@@ -256,7 +324,7 @@ submit_job <- function(path) {
 
 
 ### WORKFLOW ###
-valid_workflow_list <- c('align', 'preprocess', 'plot')
+valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute')
 valid_plot_type_list <- c('qc')
 
 
@@ -267,72 +335,47 @@ if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
 
 
 if (!run_r) {
-    if (is.null(species)) {
-        if (is.null(mito_cutoff)) {
-            print('ERROR: no species provided (--species) AND no mito cutoff provided (--mito_cutoff)')
-            quit(save='no')
-        }
-    } else {
-        if (!(species %in% c('human', 'mouse')) & !(is.null(mito_cutoff))) {
-            print('ERROR: no default mito cutoff for provided species (--mito_cutoff) and no mito cutoff provided')
-            quit(save='no')
-        }
-        if (is.null(mito_cutoff)) {
-            if (species == 'mouse') {
-                raw_args <- paste0(raw_args, ' --mito_cutoff 10')
-            } else {
-                raw_args <- paste0(raw_args, ' --mito_cutoff 5')
-            }
-        }
-    }
     raw_args <- paste0(raw_args, ' --run_r')
     if (workflow == 'align') {
+        check_species()
         job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
+        check_species()
         job_paths <- write_preprocess_job(raw_args)
+    } else if (workflow == 'impute') {
+        job_paths <- write_impute_job(raw_args)
     } else if (workflow == 'plot') {
+        if (is.null(plot_type) | !(plot_type %in% valid_plot_type_list)) {
+            print(paste0('ERROR: missing or invalid plot type specified (', plot_type, ').'))
+            quit(save='no')
+        }
+        if (plot_type == 'qc') {
+            check_species()
+        }
         job_paths <- write_plot_job(raw_args)
     }
     # submit the job from the command line
     for (path in job_paths) {
         submit_job(path)
     }
+### when the job script runs sc-flow.R ###
 } else {
     if (workflow == 'preprocess') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
         run_preprocess(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff)
+    } else if (workflow == 'impute') {
+        source('./scripts/preprocess/preprocess.R')
+        source('./scripts/preprocess/alra.R')
+        obj <- load_seurat_obj(obj_path)
+        apply_imputation(obj, out_impute_dir)
     } else if (workflow == 'cluster') {
         print('clustering')
     } else if (workflow == 'plot') {
-        if (is.null(plot_type) | !(plot_type %in% valid_plot_type_list)) {
-            print(paste0('ERROR: missing or invalid plot type specified (', plot_type, ').'))
-            quit(save='no')
-        }
         source('./scripts/plots/plots.R')
-        #if (is.null(mito_cutoff)) {
-        #    if (species == 'mouse') {
-        #        mito_cutoff <- 10
-        #    } else {
-        #        mito_cutoff <- 5
-        #    }
-        #}
         if (plot_type == 'qc') {
-            if (is.null(xlab)) {
-                xlab <- 'Mitochondrial expression (%)'
-            }
-            if (is.null(ylab)) {
-                ylab <- 'Sample IDs'
-            }
-            xvar <- 'sample_ids'
-            yvar <- 'Mito'
-            print(mito_cutoff)
-            meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
-            plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-', yvar, '.png')
-            metadata <- read.table(meta_path, sep='\t')
-            plot_dir <- paste0(plot_dir, plot_type, '/')
-            violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
-                        plot_dir, plot_name, width, height)
+            plot_qc(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
+                    plot_dir, plot_name, width, height)
         }
     }
 }
