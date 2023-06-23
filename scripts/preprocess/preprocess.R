@@ -9,12 +9,6 @@ suppressPackageStartupMessages({
 })
 
 
-load_seurat_obj <- function(path) {
-    obj <- readRDS(file=path)
-    return(obj)
-}
-
-
 #TODO: conditional Gene / GeneFull for introns
 #TODO: conditional filtered / raw
 # get a list of mtx dirs

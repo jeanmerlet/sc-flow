@@ -1,15 +1,22 @@
 # Libraries
 suppressPackageStartupMessages({
     library(optparse)
+    library(future)
 })
+# /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes
 
 raw_args <- paste0(commandArgs(trailingOnly = TRUE), collapse=' ')
 
+options(future.rng.onMisuse = "ignore")
+options(future.globals.maxSize = 100 * 1024^3)
+
 mtx_dir <- './data/count-matrices/'
+obj_dir <- './data/seurat-objects/'
 plot_dir <- './plots/'
 meta_dir <- './data/metadata/'
 
 
+#TODO: standardize timing print statements
 # Argument parser
 option_list <- list(
     make_option(
@@ -128,6 +135,24 @@ option_list <- list(
         type='character',
         default=NULL,
         help='subplots by factor'
+    ),
+    make_option(
+        c('--resolution'),
+        type='numeric',
+        default=0.3,
+        help='resolution ranges between 0 and 1. Higher values increase the number of clusters'
+    ),
+    make_option(
+        c('--pcs'),
+        type='numeric',
+        default=50,
+        help='number of principal components'
+    ),
+    make_option(
+        c('--use_integrated'),
+        type='logical',
+        default=FALSE,
+        help='wheter to use the integrated seurat obj instead of the imputed one'
     )
 )
 
@@ -145,6 +170,9 @@ min_uniq_gene_cutoff <- opt$min_uniq_gene_cutoff
 integrate <- opt$integrate
 plot_type <- opt$plot_type
 condition <- opt$by_condition
+resolution <- opt$resolution
+pcs <- opt$pcs
+use_integrated <- opt$use_integrated
 #xvar <- opt$xvar
 #yvar <- opt$yvar
 xlab <- opt$xlab
@@ -184,6 +212,7 @@ run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cut
     preprocessed_obj <- apply_min_uniq_gene_filter(preprocessed_obj, min_uniq_gene_cutoff)
     preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)
     preprocessed_obj <- apply_mito_filter(preprocessed_obj, mito_cutoff)
+    saveRDS(preprocessed_obj, file="./data/seurat-objects/preprocessed.rds")
     apply_imputation(preprocessed_obj)
     if (integrate) {
         apply_integration(preprocessed_obj)
@@ -218,6 +247,18 @@ plot_qc <- function(metadata, xvar, yvar, condition, mito_cutoff,
     ylab <- 'Density'
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
     density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
+}
+
+
+cluster <- function(out_dir, pcs, resolution, use_integrated) {
+    if (use_integrated) {
+        obj_path <- './data/seurat-objects/integrated.rds'
+    } else {
+        obj_path <- './data/seurat-objects/preprocessed.rds'
+    }
+    obj <- load_seurat_obj(obj_path)
+    obj <- apply_dim_reduce(obj, pcs)
+    apply_clustering(obj, out_dir, pcs, resolution, use_integrated)
 }
 
 
@@ -343,7 +384,7 @@ submit_job <- function(path) {
 
 
 ### WORKFLOW ###
-valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute')
+valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute', 'cluster')
 valid_plot_type_list <- c('qc')
 
 
@@ -379,6 +420,7 @@ if (!run_r) {
     }
 ### when the job script runs sc-flow.R ###
 } else {
+    source('./scripts/seurat/utils.R')
     if (workflow == 'preprocess') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
@@ -389,7 +431,8 @@ if (!run_r) {
         obj <- load_seurat_obj(obj_path)
         apply_imputation(obj, out_impute_dir)
     } else if (workflow == 'cluster') {
-        print('clustering')
+        source('./scripts/seurat/cluster.R')
+        cluster(meta_dir, pcs, resolution, use_integrated)
     } else if (workflow == 'plot') {
         source('./scripts/plots/plots.R')
         if (plot_type == 'qc') {
