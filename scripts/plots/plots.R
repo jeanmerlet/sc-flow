@@ -1,4 +1,3 @@
-
 # Libraries
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggrepel))
@@ -74,7 +73,6 @@ bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,
 # Density plot function
 
 density_plot <- function(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height) {
-    
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes(x = xvar,color = condition)) + scale_color_discrete(name = "Condition")
 	} else {
@@ -89,5 +87,34 @@ density_plot <- function(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,pl
 		xlab(xlab) +
 		ylab(ylab)
 	ggsave(paste0(plot_dir,plot_name),plot = plot,width = width,height = height)
-
 }
+
+
+# Umap plot function
+
+plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, min_dist, nn) {
+    if (integrated) {
+        obj_type <- 'integrated'
+    } else {
+        obj_type <- 'preprocessed'
+    }
+    umap_coords_path <- paste0(meta_dir, 'umap_pcs-', pcs, '_min-dist-', min_dist, '_nn-', nn, '.tsv')
+    clusters_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type, '_resolution-', res, '_num-pcs-', pcs, '.tsv')
+    metadata <- read.table(umap_coords_path, sep='\t', header=TRUE)
+    clusters <- read.table(clusters_path, sep='\t', header=TRUE)
+    metadata$clusters <- factor(clusters$clusters, levels=sort(unique(clusters$clusters)))
+    plot <- ggplot(data = metadata, aes(x = UMAP_1, y = UMAP_2, color = clusters))+
+        geom_point(alpha = 1, size = 0.8)+
+        guides(color = guide_legend(override.aes = list(title = "",alpha = 1,size = 4)))+
+        theme(
+            strip.text.y = element_text(angle = 0),
+            legend.title = element_blank()
+        )+
+        xlab("UMAP 1")+
+        ylab("UMAP 2")
+    plot_name <- paste0('umap-clusters_obj-type-', obj_type, '_pcs-', pcs, '_res-', res,
+                        '_min-dist-', min_dist, '_nn-', nn, '.png')
+	ggsave(paste0(plot_dir, 'cells/', plot_name), plot = plot,width = width,height = height)
+}
+
+

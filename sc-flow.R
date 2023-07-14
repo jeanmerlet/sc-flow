@@ -149,8 +149,21 @@ option_list <- list(
         help='number of principal components'
     ),
     make_option(
+        c('--min_dist'),
+        type='numeric',
+        default=0.3,
+        help='minimum distance for umap projections'
+    ),
+    make_option(
+        c('--nn'),
+        type='numeric',
+        default=30,
+        help='number of nearest neighbors for umap'
+    ),
+    make_option(
         c('--use_integrated'),
         type='logical',
+        action='store_true',
         default=FALSE,
         help='wheter to use the integrated seurat obj instead of the imputed one'
     )
@@ -179,6 +192,9 @@ xlab <- opt$xlab
 ylab <- opt$ylab
 width <- opt$width
 height <- opt$height
+min_dist <- opt$min_dist
+nn <- opt$nn
+
 
 
 # error functions
@@ -385,7 +401,7 @@ submit_job <- function(path) {
 
 ### WORKFLOW ###
 valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute', 'cluster')
-valid_plot_type_list <- c('qc')
+valid_plot_type_list <- c('qc', 'umap')
 
 
 if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
@@ -422,9 +438,12 @@ if (!run_r) {
 } else {
     source('./scripts/seurat/utils.R')
     if (workflow == 'preprocess') {
-        source('./scripts/preprocess/preprocess.R')
+        #source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
-        run_preprocess(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff)
+        source('./scripts/seurat/umap.R')
+        #run_preprocess(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff)
+        #TODO: remove quotes in savefile
+        gen_umap(meta_dir, pcs, min_dist, nn, use_integrated)
     } else if (workflow == 'impute') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
@@ -438,6 +457,8 @@ if (!run_r) {
         if (plot_type == 'qc') {
             plot_qc(metadata, xvar, yvar, condition, mito_cutoff,
                     plot_dir, plot_name, width, height)
+        } else if (plot_type == 'umap') {
+            plot_umap(meta_dir, plot_dir, width, height, pcs, resolution, use_integrated, min_dist, nn)
         }
     }
 }
