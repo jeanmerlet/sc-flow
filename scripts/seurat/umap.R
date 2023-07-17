@@ -16,5 +16,5 @@ gen_umap <- function(meta_dir, npcs, min_dist, nn, use_integrated) {
     umap_data <- as.data.frame(Embeddings(object = obj[['umap']]))
     names(umap_data) <- c('UMAP_1','UMAP_2')
     out_path <- paste0(meta_dir, 'umap_pcs-', npcs, '_min-dist-', min_dist, '_nn-', nn, '.tsv')
-    write.table(umap_data, out_path, sep = '\t',row.names = TRUE,col.names = TRUE)
+    write.table(umap_data, out_path, sep = '\t', row.names = TRUE, col.names = TRUE, quote=FALSE)
 }

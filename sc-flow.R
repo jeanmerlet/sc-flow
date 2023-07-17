@@ -4,6 +4,7 @@ suppressPackageStartupMessages({
     library(future)
 })
 # /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes
+# /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat
 
 raw_args <- paste0(commandArgs(trailingOnly = TRUE), collapse=' ')
 
@@ -139,7 +140,7 @@ option_list <- list(
     make_option(
         c('--resolution'),
         type='numeric',
-        default=0.3,
+        default=0.1,
         help='resolution ranges between 0 and 1. Higher values increase the number of clusters'
     ),
     make_option(
@@ -334,12 +335,13 @@ script <- c(
     "",
     "#SBATCH -A SYB111",
     "#SBATCH -N 1",
-    "#SBATCH -t 6:00:00",
+    "#SBATCH -t 2:00:00",
     "#SBATCH -J preprocess",
     "#SBATCH -o ./scripts/preprocess/logs/preprocess.%J.out",
     "#SBATCH -e ./scripts/preprocess/logs/preprocess.%J.err",
     "",
-    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
+    #"source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
+    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
     "",
     paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
     )
@@ -348,7 +350,7 @@ script <- c(
     return(c(out_path))
 }
 
-
+#
 #TODO: calculate time needed
 write_impute_job <- function(raw_args) {
 script <- c(
@@ -438,12 +440,9 @@ if (!run_r) {
 } else {
     source('./scripts/seurat/utils.R')
     if (workflow == 'preprocess') {
-        #source('./scripts/preprocess/preprocess.R')
+        source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
-        source('./scripts/seurat/umap.R')
-        #run_preprocess(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff)
-        #TODO: remove quotes in savefile
-        gen_umap(meta_dir, pcs, min_dist, nn, use_integrated)
+        run_preprocess(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff)
     } else if (workflow == 'impute') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
@@ -458,7 +457,10 @@ if (!run_r) {
             plot_qc(metadata, xvar, yvar, condition, mito_cutoff,
                     plot_dir, plot_name, width, height)
         } else if (plot_type == 'umap') {
-            plot_umap(meta_dir, plot_dir, width, height, pcs, resolution, use_integrated, min_dist, nn)
+            source('./scripts/seurat/umap.R')
+            gen_umap(meta_dir, pcs, min_dist, nn, use_integrated)
+            plot_umap(meta_dir, plot_dir, width, height, pcs,
+                      resolution, use_integrated, min_dist, nn)
         }
     }
 }
