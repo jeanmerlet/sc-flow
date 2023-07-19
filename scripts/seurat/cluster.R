@@ -16,3 +16,17 @@ apply_clustering <- function(obj, out_dir, num_pcs, res, use_integrated) {
     write.table(data_frame, row.names=TRUE, col.names=NA, file=out_path, sep='\t', quote=FALSE)
     print(paste0('Clustering took ', difftime(Sys.time(), start_time, units='secs')))
 }
+
+
+# Cluster workflow
+cluster <- function(out_dir, pcs, resolution, use_integrated) {
+    if (use_integrated) {
+        obj_path <- './data/seurat-objects/integrated.rds'
+    } else {
+        obj_path <- './data/seurat-objects/preprocessed.rds'
+    }
+    obj <- load_seurat_obj(obj_path)
+    obj <- apply_dim_reduce(obj, pcs)
+    apply_clustering(obj, out_dir, pcs, resolution, use_integrated)
+}
+

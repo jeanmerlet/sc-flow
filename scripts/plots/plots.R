@@ -19,7 +19,7 @@ suppressPackageStartupMessages(library(scales))
 # height: height of saved plot (numeric)
 
 
-# Violin plot function
+# Violin plot
 
 violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_dir,plot_name,width,height) {
 
@@ -44,10 +44,9 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 }
 
 
-# Bar plot function
+# Bar plot
 
 bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,height) {
-
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes(x = xvar,fill = condition)) + facet_grid(.~condition,scales = "free") + scale_fill_discrete(name = "Condition")
@@ -70,7 +69,7 @@ bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,
 }
 
 
-# Density plot function
+# Density plot
 
 density_plot <- function(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height) {
 	if(condition) {
@@ -90,7 +89,39 @@ density_plot <- function(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,pl
 }
 
 
-# Umap plot function
+# Qc plot workflow
+
+plot_qc <- function(metadata, xvar, yvar, condition, mito_cutoff,
+                    plot_dir, plot_name, width, height) {
+    xvar <- 'sample_ids'
+    yvar <- 'Mito'
+    meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
+    metadata <- read.table(meta_path, sep='\t')
+    plot_dir <- paste0(plot_dir, plot_type, '/')
+    xlab <- 'Mitochondrial expression (%)'
+    ylab <- 'Sample IDs'
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', yvar, '_yvar-', xvar, '.png')
+    violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
+                plot_dir, plot_name, width, height)
+    xlab <- 'Sample IDs'
+    ylab <- ''
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-total-cells.png')
+    bar_plot(metadata, xvar, xlab, ylab, condition, plot_dir, plot_name, width, height)
+    facet_var <- 'sample_ids'
+    xvar <- 'nCount_RNA'
+    xlab <- 'Total UMIs per cell'
+    ylab <- 'Density'
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
+    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
+    xvar <- 'nFeature_RNA'
+    xlab <- 'Unique Genes per cell'
+    ylab <- 'Density'
+    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
+    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
+}
+
+
+# Umap plot workflow and plotting
 
 plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, min_dist, nn) {
     if (integrated) {
@@ -116,5 +147,3 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
                         '_min-dist-', min_dist, '_nn-', nn, '.png')
 	ggsave(paste0(plot_dir, 'cells/', plot_name), plot = plot,width = width,height = height)
 }
-
-

@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
 
 raw_args <- paste0(commandArgs(trailingOnly = TRUE), collapse=' ')
 
+plan('multicore', workers = 8)
 options(future.rng.onMisuse = "ignore")
 options(future.globals.maxSize = 100 * 1024^3)
 
@@ -15,6 +16,7 @@ mtx_dir <- './data/count-matrices/'
 obj_dir <- './data/seurat-objects/'
 plot_dir <- './plots/'
 meta_dir <- './data/metadata/'
+de_dir <- './data/de/'
 
 
 #TODO: standardize timing print statements
@@ -162,11 +164,23 @@ option_list <- list(
         help='number of nearest neighbors for umap'
     ),
     make_option(
+        c('--p_value'),
+        type='numeric',
+        default=0.1,
+        help='p-value cutoff for differential expression'
+    ),
+    make_option(
         c('--use_integrated'),
         type='logical',
         action='store_true',
         default=FALSE,
         help='wheter to use the integrated seurat obj instead of the imputed one'
+    ),
+    make_option(
+        c('--diff_type'),
+        type='character',
+        default='cluster',
+        help='type of differential expression comparison to run'
     )
 )
 
@@ -195,7 +209,8 @@ width <- opt$width
 height <- opt$height
 min_dist <- opt$min_dist
 nn <- opt$nn
-
+p_value <- opt$p_value
+diff_type <- opt$diff_type
 
 
 # error functions
@@ -218,64 +233,6 @@ check_species <- function (raw_args, mito_cutoff) {
             }
         }
     }
-}
-
-
-# workflows
-run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff) {
-    sample_dirs <- fetch_mtx_dirs(mtx_dir)
-    merged_data <- merge_all(sample_dirs)
-    preprocessed_obj <- apply_rare_gene_filter(merged_data$obj, merged_data$sample_ids, rare_gene_cutoff)
-    preprocessed_obj <- apply_min_uniq_gene_filter(preprocessed_obj, min_uniq_gene_cutoff)
-    preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)
-    preprocessed_obj <- apply_mito_filter(preprocessed_obj, mito_cutoff)
-    saveRDS(preprocessed_obj, file="./data/seurat-objects/preprocessed.rds")
-    apply_imputation(preprocessed_obj)
-    if (integrate) {
-        apply_integration(preprocessed_obj)
-    }
-}
-
-
-plot_qc <- function(metadata, xvar, yvar, condition, mito_cutoff,
-                    plot_dir, plot_name, width, height) {
-    xvar <- 'sample_ids'
-    yvar <- 'Mito'
-    meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
-    metadata <- read.table(meta_path, sep='\t')
-    plot_dir <- paste0(plot_dir, plot_type, '/')
-    xlab <- 'Mitochondrial expression (%)'
-    ylab <- 'Sample IDs'
-    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', yvar, '_yvar-', xvar, '.png')
-    violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
-                plot_dir, plot_name, width, height)
-    xlab <- 'Sample IDs'
-    ylab <- ''
-    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-total-cells.png')
-    bar_plot(metadata, xvar, xlab, ylab, condition, plot_dir, plot_name, width, height)
-    facet_var <- 'sample_ids'
-    xvar <- 'nCount_RNA'
-    xlab <- 'Total UMIs per cell'
-    ylab <- 'Density'
-    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
-    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
-    xvar <- 'nFeature_RNA'
-    xlab <- 'Unique Genes per cell'
-    ylab <- 'Density'
-    plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
-    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
-}
-
-
-cluster <- function(out_dir, pcs, resolution, use_integrated) {
-    if (use_integrated) {
-        obj_path <- './data/seurat-objects/integrated.rds'
-    } else {
-        obj_path <- './data/seurat-objects/preprocessed.rds'
-    }
-    obj <- load_seurat_obj(obj_path)
-    obj <- apply_dim_reduce(obj, pcs)
-    apply_clustering(obj, out_dir, pcs, resolution, use_integrated)
 }
 
 
@@ -350,7 +307,7 @@ script <- c(
     return(c(out_path))
 }
 
-#
+
 #TODO: calculate time needed
 write_impute_job <- function(raw_args) {
 script <- c(
@@ -360,7 +317,6 @@ script <- c(
     "#SBATCH -N 1",
     "#SBATCH -t 2:00:00",
     "#SBATCH -J impute",
-    "#SBATCH -p gpu",
     "#SBATCH -o ./scripts/preprocess/logs/impute.%J.out",
     "#SBATCH -e ./scripts/preprocess/logs/impute.%J.err",
     "",
@@ -369,6 +325,29 @@ script <- c(
     paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
     )
     out_path <- "./scripts/jobs/impute.sbatch"
+    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    return(c(out_path))
+}
+
+
+#TODO: calculate time needed
+write_cluster_job <- function(raw_args) {
+script <- c(
+    "#!/bin/bash",
+    "",
+    "#SBATCH -A SYB111",
+    "#SBATCH -N 1",
+    "#SBATCH -t 2:00:00",
+    "#SBATCH -J cluster",
+    "#SBATCH -o ./scripts/seurat/logs/cluster.%J.out",
+    "#SBATCH -e ./scripts/seurat/logs/cluster.%J.err",
+    "",
+    #"source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
+    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
+    "",
+    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    )
+    out_path <- "./scripts/jobs/cluster.sbatch"
     write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
     return(c(out_path))
 }
@@ -401,9 +380,37 @@ submit_job <- function(path) {
 }
 
 
+#TODO: calculate time needed
+write_diff_exp_job <- function(raw_args) {
+script <- c(
+    "#!/bin/bash",
+    "",
+    "#SBATCH -A SYB111",
+    "#SBATCH -N 1",
+    "#SBATCH -t 2:00:00",
+    paste0("#SBATCH -J diff-exp_", diff_type),
+    paste0("#SBATCH -o ./scripts/seurat/logs/diff-exp_", diff_type, ".%J.out"),
+    paste0("#SBATCH -e ./scripts/seurat/logs/diff-exp_", diff_type, ".%J.err"),
+    "",
+    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
+    "",
+    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    )
+    out_path <- paste0("./scripts/jobs/diff-exp_", diff_type, ".sbatch")
+    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    return(c(out_path))
+}
+
+submit_job <- function(path) {
+    command <- paste0('sbatch ', path)
+    system(command)
+}
+
+
 ### WORKFLOW ###
-valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute', 'cluster')
+valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute', 'cluster', 'diff_exp')
 valid_plot_type_list <- c('qc', 'umap')
+valid_diff_type_list <- c('cluster')
 
 
 if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
@@ -422,7 +429,10 @@ if (!run_r) {
         job_paths <- write_preprocess_job(raw_args)
     } else if (workflow == 'impute') {
         job_paths <- write_impute_job(raw_args)
+    } else if (workflow == 'cluster') {
+        job_paths <- write_cluster_job(raw_args)
     } else if (workflow == 'plot') {
+#TODO: move to error function and have work when doing interactively with --run_r
         if (is.null(plot_type) | !(plot_type %in% valid_plot_type_list)) {
             print(paste0('ERROR: missing or invalid plot type specified (', plot_type, ').'))
             quit(save='no')
@@ -431,6 +441,9 @@ if (!run_r) {
             raw_args <- check_species(raw_args, mito_cutoff)
         }
         job_paths <- write_plot_job(raw_args)
+    } else if (workflow == 'diff_exp') {
+#TODO: do a check for diff_type and move that check to error function
+        job_paths <- write_diff_exp_job(raw_args)
     }
     # submit the job from the command line
     for (path in job_paths) {
@@ -462,5 +475,19 @@ if (!run_r) {
             plot_umap(meta_dir, plot_dir, width, height, pcs,
                       resolution, use_integrated, min_dist, nn)
         }
+    } else if (workflow == 'diff_exp') {
+        source('./scripts/seurat/diff_exp.R')
+        obj_path <- './data/seurat-objects/imputed.rds'
+        obj <- load_seurat_obj(obj_path)
+        #TODO: move integrated / preprocessed logic to utils
+        if (use_integrated) {
+            obj_type <- 'integrated'
+        } else {
+            obj_type <- 'preprocessed'
+        }
+        meta_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type, '_resolution-',
+                            resolution, '_num-pcs-', pcs, '.tsv')
+        obj <- add_metadata(obj, meta_path)
+        run_diff_exp(obj, de_dir, diff_type, p_value)
     }
 }
