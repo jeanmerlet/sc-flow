@@ -167,7 +167,25 @@ option_list <- list(
         c('--p_value'),
         type='numeric',
         default=0.1,
-        help='p-value cutoff for differential expression'
+        help='adjusted p-value threshold for differential expression'
+    ),
+    make_option(
+        c('--top_n_genes'),
+        type='numeric',
+        default=5,
+        help='number of genes per diff_type for volcano plot'
+    ),
+    make_option(
+        c('--p_cutoff'),
+        type='numeric',
+        default=0.05,
+        help='adjusted p-value cutoff for volcano plot'
+    ),
+    make_option(
+        c('--log2fc'),
+        type='numeric',
+        default=0.5,
+        help='minimum absolute log2 fold change for volcano plot'
     ),
     make_option(
         c('--use_integrated'),
@@ -211,6 +229,9 @@ min_dist <- opt$min_dist
 nn <- opt$nn
 p_value <- opt$p_value
 diff_type <- opt$diff_type
+log2fc <- opt$log2fc
+top_n_genes <- opt$top_n_genes
+p_cutoff <- opt$p_cutoff
 
 
 # error functions
@@ -394,7 +415,7 @@ script <- c(
     "",
     "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
     "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    paste0("srun -n 1 -c 8 Rscript ./sc-flow.R ", raw_args)
     )
     out_path <- paste0("./scripts/jobs/diff-exp_", diff_type, ".sbatch")
     write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
@@ -409,7 +430,7 @@ submit_job <- function(path) {
 
 ### WORKFLOW ###
 valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute', 'cluster', 'diff_exp')
-valid_plot_type_list <- c('qc', 'umap')
+valid_plot_type_list <- c('qc', 'umap', 'volcano')
 valid_diff_type_list <- c('cluster')
 
 
@@ -474,6 +495,9 @@ if (!run_r) {
             gen_umap(meta_dir, pcs, min_dist, nn, use_integrated)
             plot_umap(meta_dir, plot_dir, width, height, pcs,
                       resolution, use_integrated, min_dist, nn)
+        } else if (plot_type == 'volcano') {
+            plot_volcano(de_dir, plot_dir, diff_type, p_value, p_cutoff,
+                         log2fc, top_n_genes, width, height)
         }
     } else if (workflow == 'diff_exp') {
         source('./scripts/seurat/diff_exp.R')

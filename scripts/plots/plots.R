@@ -2,6 +2,7 @@
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggrepel))
 suppressPackageStartupMessages(library(scales))
+suppressPackageStartupMessages(library(dplyr))
 
 
 # Function arguments
@@ -146,4 +147,48 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     plot_name <- paste0('umap-clusters_obj-type-', obj_type, '_pcs-', pcs, '_res-', res,
                         '_min-dist-', min_dist, '_nn-', nn, '.png')
 	ggsave(paste0(plot_dir, 'cells/', plot_name), plot = plot,width = width,height = height)
+}
+
+
+# DEG volcano plot
+plot_volcano <- function(deg_dir, plot_dir, diff_type, p_value, p_cutoff, log2fc, top_n_genes,
+                         width, height) {
+    degs_path <- paste0(deg_dir, 'degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
+    degs <- read.table(degs_path, sep='\t', header=TRUE, row.names=1)
+    # add significance column
+    degs <- degs %>% mutate(
+        significance = ifelse(
+            avg_log2FC >= log2fc & p_val_adj < p_cutoff,
+            "up-regulated",
+            ifelse(
+                avg_log2FC <= -log2fc & p_val_adj < p_cutoff,
+                "down-regulated",
+                "non-significant"
+            )
+        )
+    ) %>% data.frame()
+    # add labels for most significant genes in each lineage
+    labels <- do.call("rbind",lapply(unique(degs[[diff_type]]),function(x){
+        up <- degs[degs[[diff_type]] == x & degs$significance == "up-regulated",]
+        up <- up[order(up$avg_log2FC,up$p_val_adj,decreasing = c(TRUE,FALSE)),][1:top_n_genes,]
+        down <- degs[degs[[diff_type]] == x & degs$significance == "down-regulated",]
+        down <- down[order(down$avg_log2FC,down$p_val_adj,decreasing = c(FALSE,FALSE)),][1:top_n_genes,]
+        return(rbind(up,down))
+    }))
+    plot <- ggplot(data = degs,aes(x = avg_log2FC,y = -log10(p_val_adj),col = significance)) +
+        geom_point(size = 0.8) +
+        facet_wrap(as.formula(paste("~", diff_type)), scales = "free") +
+        scale_color_manual(values = c("down-regulated" = "blue","non-significant" = "black","up-regulated" = "red")) +
+        geom_vline(xintercept = c(-log2fc, log2fc),col = "black",linetype = "dashed") +
+        geom_hline(yintercept = -log10(p_cutoff),col = "black",linetype = "dashed") +
+        geom_label_repel(data = labels,aes(x = avg_log2FC,y = -log10(p_val_adj),label = gene,col = significance),
+                         min.segment.length = 0,size = 2,show.legend = FALSE, max.overlaps=100)+
+        theme(legend.title = element_blank())+
+        guides(color = guide_legend(override.aes = list(alpha = 1,size = 4)))+
+        labs(x = expression(log[2](FC))) +
+        labs(y = expression(-log[10](adj. ~ p-value)))
+    plot_name <- paste0('volcano_diff-type-', diff_type, '_min-l2fc-', log2fc, '_p-value-',
+                        p_value, '_p-cutoff-', p_cutoff, '_top-', top_n_genes, '-genes.png')
+	ggsave(paste0(plot_dir, 'de/', plot_name), plot = plot,width = width,height = height)
+    warnings()
 }
