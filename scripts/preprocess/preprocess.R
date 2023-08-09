@@ -30,27 +30,47 @@ fetch_mtx_dirs <- function(root_dir) {
 
 #TODO: minutes vs seconds
 # read all samples and combine into one
-merge_all <- function(sample_dirs) {
+merge_all <- function(sample_dirs, meta_dir, load_meta) {
     start_time <- Sys.time()
+    if (load_meta) {
+        user_meta <- read.table(paste0(meta_dir, 'sample_meta.tsv'), sep='\t', header=TRUE)
+    }
     first <- TRUE
     sample_ids <- c()
     for (sample_dir in sample_dirs) {
         mtx <- Read10X(sample_dir)
         sample_id <- str_match(sample_dir, "count-matrices/(.*)_Solo.out")[1,2]
+        if (load_meta) {
+            condition <- user_meta[user_meta$sample_name==sample_id, ]$condition
+        }
         colnames(mtx) <- paste0(colnames(mtx), '_', sample_id)
         rownames(mtx) <- toupper(rownames(mtx))
         seurat_obj <- CreateSeuratObject(counts=mtx)
         sample_ids <- c(sample_ids, rep(sample_id, length(colnames(mtx))))
         if (first == TRUE) {
             combined_seurat_obj <- seurat_obj
+            if (load_meta) {
+                row_names <- Cells(seurat_obj)
+                obj_meta <- data.frame('condition'=rep(condition, length(row_names)))
+                rownames(obj_meta) <- row_names
+            }
             first <- FALSE
         } else {
             combined_seurat_obj <- merge(combined_seurat_obj, seurat_obj)
+            if (load_meta) {
+                row_names <- c(rownames(obj_meta), Cells(seurat_obj))
+                obj_meta <- rbind(obj_meta, data.frame('condition'=rep(condition, length(Cells(seurat_obj)))))
+                rownames(obj_meta) <- row_names
+            }
         }
     }
+    if (load_meta) {
+        combined_seurat_obj <- AddMetaData(combined_seurat_obj, obj_meta)
+    }
 	end_time <- Sys.time()
+    print(str(combined_seurat_obj@meta.data))
 	print(paste0("Sample combining runtime: ",round(end_time - start_time, 2)," minutes"))
-    saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
+    #saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
     merged_data <- list(combined_seurat_obj, sample_ids)
     names(merged_data) <- c('obj', 'sample_ids')
     return(merged_data)
@@ -135,10 +155,10 @@ apply_integration <- function(obj) {
 }
 
 
-# preprocess wokrflow
-run_preprocess <- function(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff) {
+# preprocess workflow
+run_preprocess <- function(mtx_dir, meta_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta) {
     sample_dirs <- fetch_mtx_dirs(mtx_dir)
-    merged_data <- merge_all(sample_dirs)
+    merged_data <- merge_all(sample_dirs, meta_dir, load_meta)
     preprocessed_obj <- apply_rare_gene_filter(merged_data$obj, merged_data$sample_ids, rare_gene_cutoff)
     preprocessed_obj <- apply_min_uniq_gene_filter(preprocessed_obj, min_uniq_gene_cutoff)
     preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)

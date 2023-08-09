@@ -109,18 +109,6 @@ option_list <- list(
         default=5,
         help='plot height'
     ),
-#    make_option(
-#        c('--xvar'),
-#        type='character',
-#        default=NULL,
-#        help='xvar'
-#    ),
-#    make_option(
-#        c('--yvar'),
-#        type='character',
-#        default=NULL,
-#        help='yvar'
-#    ),
     make_option(
         c('--xlab'),
         type='character',
@@ -142,7 +130,7 @@ option_list <- list(
     make_option(
         c('--resolution'),
         type='numeric',
-        default=0.1,
+        default=0.3,
         help='resolution ranges between 0 and 1. Higher values increase the number of clusters'
     ),
     make_option(
@@ -192,7 +180,14 @@ option_list <- list(
         type='logical',
         action='store_true',
         default=FALSE,
-        help='wheter to use the integrated seurat obj instead of the imputed one'
+        help='whether to use the integrated seurat obj instead of the imputed one'
+    ),
+    make_option(
+        c('--load_meta'),
+        type='logical',
+        action='store_true',
+        default=FALSE,
+        help='whether to load sample metadata from the user meta file (sample_meta.tsv)',
     ),
     make_option(
         c('--diff_type'),
@@ -219,8 +214,6 @@ condition <- opt$by_condition
 resolution <- opt$resolution
 pcs <- opt$pcs
 use_integrated <- opt$use_integrated
-#xvar <- opt$xvar
-#yvar <- opt$yvar
 xlab <- opt$xlab
 ylab <- opt$ylab
 width <- opt$width
@@ -232,6 +225,7 @@ diff_type <- opt$diff_type
 log2fc <- opt$log2fc
 top_n_genes <- opt$top_n_genes
 p_cutoff <- opt$p_cutoff
+load_meta <- opt$load_meta
 
 
 # error functions
@@ -476,7 +470,7 @@ if (!run_r) {
     if (workflow == 'preprocess') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
-        run_preprocess(mtx_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff)
+        run_preprocess(mtx_dir, meta_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta)
     } else if (workflow == 'impute') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
