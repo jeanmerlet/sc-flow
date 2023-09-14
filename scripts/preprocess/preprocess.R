@@ -1,5 +1,4 @@
-# Libraries
-suppressPackageStartupMessages({
+# Libraries suppressPackageStartupMessages({
     library(Seurat)
     library(readr)
     library(stringr)
@@ -65,10 +64,10 @@ merge_all <- function(sample_dirs, meta_dir, load_meta) {
         }
     }
     if (load_meta) {
-        combined_seurat_obj <- AddMetaData(combined_seurat_obj, obj_meta)
+        combined_seurat_obj <- AddMetaData(combined_seurat_obj, obj_meta, col.name='condition')
     }
+    print(str(combined_seurat_obj))
 	end_time <- Sys.time()
-    print(str(combined_seurat_obj@meta.data))
 	print(paste0("Sample combining runtime: ",round(end_time - start_time, 2)," minutes"))
     #saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
     merged_data <- list(combined_seurat_obj, sample_ids)
@@ -159,6 +158,7 @@ apply_integration <- function(obj) {
 run_preprocess <- function(mtx_dir, meta_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta) {
     sample_dirs <- fetch_mtx_dirs(mtx_dir)
     merged_data <- merge_all(sample_dirs, meta_dir, load_meta)
+    print('No cells found is a problem after this print statement')
     preprocessed_obj <- apply_rare_gene_filter(merged_data$obj, merged_data$sample_ids, rare_gene_cutoff)
     preprocessed_obj <- apply_min_uniq_gene_filter(preprocessed_obj, min_uniq_gene_cutoff)
     preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)
