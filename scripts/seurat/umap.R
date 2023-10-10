@@ -3,7 +3,6 @@ library(Seurat)
 
 #TODO: move integrate logic to utils
 gen_umap <- function(meta_dir, npcs, min_dist, nn, use_integrated) {
-    obj_path <- './data/seurat-objects/preprocessed.rds'
     if (use_integrated) {
         obj_path <- './data/seurat-objects/integrated.rds'
     } else {

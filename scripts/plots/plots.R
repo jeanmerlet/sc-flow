@@ -11,7 +11,7 @@ suppressPackageStartupMessages(library(dplyr))
 # yvar: the y variable to create the violins with (numeric)
 # xlab: the label for the x-axis (character)
 # ylab: the label for the y-axis (character)
-# facet_var: create a plot for each level of a factor variable (character)
+# split_by: create a plot for each level of a factor variable (character)
 # condition: whether the user wants to color the violin plots with condition variable (logical)
 # mito_cutoff: the mitochondrial cutoff used for the preprocessing (numeric)
 # plot_dir: the plotting directory (character)
@@ -72,7 +72,7 @@ bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,
 
 # Density plot
 
-density_plot <- function(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height) {
+density_plot <- function(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plot_name,width,height) {
 	if(condition) {
 		plot <- plot + ggplot(data = metadata,aes(x = xvar,color = condition)) + scale_color_discrete(name = "Condition")
 	} else {
@@ -81,8 +81,8 @@ density_plot <- function(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,pl
 	plot <- plot +
 		geom_density() +
 		scale_x_log10(labels = comma) +
-        facet_wrap(as.formula(paste("~", facet_var))) +
-		#facet_wrap(!!sym(facet_var)~.) +
+        facet_wrap(as.formula(paste("~", split_by))) +
+		#facet_wrap(!!sym(split_by)~.) +
 		theme(strip.text.y = element_text(angle = 0)) +
 		xlab(xlab) +
 		ylab(ylab)
@@ -108,35 +108,43 @@ plot_qc <- function(metadata, xvar, yvar, condition, mito_cutoff,
     ylab <- ''
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-total-cells.png')
     bar_plot(metadata, xvar, xlab, ylab, condition, plot_dir, plot_name, width, height)
-    facet_var <- 'sample_ids'
+    split_by <- 'sample_ids'
     xvar <- 'nCount_RNA'
     xlab <- 'Total UMIs per cell'
     ylab <- 'Density'
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
-    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
+    density_plot(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plot_name,width,height)
     xvar <- 'nFeature_RNA'
     xlab <- 'Unique Genes per cell'
     ylab <- 'Density'
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
-    density_plot(metadata,xvar,xlab,ylab,facet_var,condition,plot_dir,plot_name,width,height)
+    density_plot(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plot_name,width,height)
 }
 
 
 # Umap plot workflow and plotting
 
-plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, min_dist, nn) {
+plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, min_dist, nn, color_by, split_by) {
     if (integrated) {
         obj_type <- 'integrated'
     } else {
         obj_type <- 'preprocessed'
     }
     umap_coords_path <- paste0(meta_dir, 'umap_pcs-', pcs, '_min-dist-', min_dist, '_nn-', nn, '.tsv')
-    clusters_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type, '_resolution-', res, '_num-pcs-', pcs, '.tsv')
-    metadata <- read.table(umap_coords_path, sep='\t', header=TRUE)
-    clusters <- read.table(clusters_path, sep='\t', header=TRUE)
-    metadata$clusters <- factor(clusters$clusters, levels=sort(unique(clusters$clusters)))
-    plot <- ggplot(data = metadata, aes(x = UMAP_1, y = UMAP_2, color = clusters))+
-        geom_point(alpha = 1, size = 0.8)+
+    umap_coords <- read.table(umap_coords_path, sep='\t', header=TRUE)
+    if (color_by == 'clusters') {
+        clusters_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type, '_resolution-', res, '_num-pcs-', pcs, '.tsv')
+        clusters <- read.table(clusters_path, sep='\t', header=TRUE)
+        umap_coords$clusters <- factor(clusters$clusters, levels=sort(unique(clusters$clusters)))
+    } else {
+        metadata_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
+        metadata <- read.table(metadata_path, sep='\t', header=TRUE)
+        umap_coords$sample_ids <- metadata$sample_ids
+        if (color_by  == 'condition') { umap_coords$condition <- metadata$condition }
+    }
+    plot <- ggplot(data = umap_coords, aes(x = UMAP_1, y = UMAP_2, color = !!sym(color_by)))+
+        geom_point(alpha = 1, size = 1.0, shape=1, stroke=0.8)+
+        scale_shape(solid=FALSE)+
         guides(color = guide_legend(override.aes = list(title = "",alpha = 1,size = 4)))+
         theme(
             strip.text.y = element_text(angle = 0),
@@ -144,7 +152,7 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
         )+
         xlab("UMAP 1")+
         ylab("UMAP 2")
-    plot_name <- paste0('umap-clusters_obj-type-', obj_type, '_pcs-', pcs, '_res-', res,
+    plot_name <- paste0('umap-color-by-', color_by, '_obj-type-', obj_type, '_pcs-', pcs, '_res-', res,
                         '_min-dist-', min_dist, '_nn-', nn, '.png')
 	ggsave(paste0(plot_dir, 'cells/', plot_name), plot = plot,width = width,height = height)
 }

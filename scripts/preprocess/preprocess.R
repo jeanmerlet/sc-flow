@@ -1,4 +1,5 @@
-# Libraries suppressPackageStartupMessages({
+# Libraries
+suppressPackageStartupMessages({
     library(Seurat)
     library(readr)
     library(stringr)
@@ -63,28 +64,31 @@ merge_all <- function(sample_dirs, meta_dir, load_meta) {
             }
         }
     }
-    if (load_meta) {
-        combined_seurat_obj <- AddMetaData(combined_seurat_obj, obj_meta, col.name='condition')
-    }
-    print(str(combined_seurat_obj))
 	end_time <- Sys.time()
 	print(paste0("Sample combining runtime: ",round(end_time - start_time, 2)," minutes"))
-    #saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
-    merged_data <- list(combined_seurat_obj, sample_ids)
-    names(merged_data) <- c('obj', 'sample_ids')
+    saveRDS(combined_seurat_obj, file="./data/seurat-objects/filtered.rds")
+    if (load_meta) {
+        merged_data <- list(combined_seurat_obj, sample_ids, obj_meta)
+        names(merged_data) <- c('obj', 'sample_ids', 'condition')
+    } else {
+        merged_data <- list(combined_seurat_obj, sample_ids)
+        names(merged_data) <- c('obj', 'sample_ids')
+    }
     return(merged_data)
 }
 
 
 #TODO: manual cutoff
-apply_rare_gene_filter <- function(obj, sample_ids, cutoff) {
+apply_rare_gene_filter <- function(obj, sample_ids, cutoff, condition, load_meta) {
     counts <- GetAssayData(object=obj, slot="counts")
     keep_genes <- Matrix::rowSums(counts) > cutoff
     filtered_counts <- counts[keep_genes, ]
     obj <- CreateSeuratObject(filtered_counts)
-    #obj <- AddMetaData(object=obj, metadata=sample_ids, col.name='sample_ids')
-    obj@meta.data$sample_ids <- sample_ids
-    test_list <- SplitObject(obj, split.by='sample_ids')
+    if (load_meta) {
+        obj <- AddMetaData(obj, condition, col.name='condition')
+    }
+    obj <- AddMetaData(obj, sample_ids, col.name='sample_ids')
+    #obj@meta.data$sample_ids <- sample_ids
     return(obj)
 }
 
@@ -94,9 +98,9 @@ apply_rare_gene_filter <- function(obj, sample_ids, cutoff) {
 # filter cells by mitochondrial gene expression
 apply_mito_filter <- function(obj, cutoff) {
     obj[["Mito"]] <- PercentageFeatureSet(obj, pattern = "^MT-")
+    obj <- subset(obj, subset=(Mito < cutoff))
     write.table(obj@meta.data, file="./data/metadata/cell_meta_filtered.tsv", sep="\t")
     write.table(obj$RNA@meta.features, file="./data/metadata/gene_meta_filtered.tsv", sep="\t")
-    obj <- subset(obj, subset=(Mito < cutoff))
     return(obj)
 }
 
@@ -158,8 +162,14 @@ apply_integration <- function(obj) {
 run_preprocess <- function(mtx_dir, meta_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta) {
     sample_dirs <- fetch_mtx_dirs(mtx_dir)
     merged_data <- merge_all(sample_dirs, meta_dir, load_meta)
-    print('No cells found is a problem after this print statement')
-    preprocessed_obj <- apply_rare_gene_filter(merged_data$obj, merged_data$sample_ids, rare_gene_cutoff)
+    obj <- merged_data$obj
+    sample_ids <- merged_data$sample_ids
+    if (load_meta) {
+        condition <- merged_data$condition
+    } else {
+        condition <- NULL
+    }
+    preprocessed_obj <- apply_rare_gene_filter(obj, sample_ids, rare_gene_cutoff, condition, load_meta)
     preprocessed_obj <- apply_min_uniq_gene_filter(preprocessed_obj, min_uniq_gene_cutoff)
     preprocessed_obj <- apply_upper_umi_cutoff(preprocessed_obj, upper_umi_cutoff)
     preprocessed_obj <- apply_mito_filter(preprocessed_obj, mito_cutoff)

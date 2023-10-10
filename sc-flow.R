@@ -61,11 +61,16 @@ option_list <- list(
         help='what kind of plots to plot'
     ),
     make_option(
-        c('--by_condition'),
-        type='logical',
-        action='store_true',
-        default=FALSE,
-        help='by condition or not'
+        c('--color_by'),
+        type='character',
+        default=NULL,
+        help='what to color plots by. valid: sample_ids, condition, clusters'
+    ),
+    make_option(
+        c('--split_by'),
+        type='character',
+        default=NULL,
+        help='what to split plots by. valid: sample_ids, condition, clusters'
     ),
     make_option(
         c('--species'),
@@ -210,7 +215,8 @@ rare_gene_cutoff <- opt$rare_gene_cutoff
 min_uniq_gene_cutoff <- opt$min_uniq_gene_cutoff
 integrate <- opt$integrate
 plot_type <- opt$plot_type
-condition <- opt$by_condition
+color_by <- opt$color_by
+split_by <- opt$split_by
 resolution <- opt$resolution
 pcs <- opt$pcs
 use_integrated <- opt$use_integrated
@@ -482,13 +488,13 @@ if (!run_r) {
     } else if (workflow == 'plot') {
         source('./scripts/plots/plots.R')
         if (plot_type == 'qc') {
-            plot_qc(metadata, xvar, yvar, condition, mito_cutoff,
+            plot_qc(metadata, xvar, yvar, color_by, mito_cutoff,
                     plot_dir, plot_name, width, height)
         } else if (plot_type == 'umap') {
             source('./scripts/seurat/umap.R')
             gen_umap(meta_dir, pcs, min_dist, nn, use_integrated)
-            plot_umap(meta_dir, plot_dir, width, height, pcs,
-                      resolution, use_integrated, min_dist, nn)
+            plot_umap(meta_dir, plot_dir, width, height, pcs, resolution,
+                      use_integrated, min_dist, nn, color_by, split_by)
         } else if (plot_type == 'volcano') {
             plot_volcano(de_dir, plot_dir, diff_type, p_value, p_cutoff,
                          log2fc, top_n_genes, width, height)
