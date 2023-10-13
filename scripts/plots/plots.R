@@ -143,9 +143,14 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     metadata <- read.table(metadata_path, sep='\t', header=TRUE)
     umap_coords$sample_ids <- metadata$sample_ids
     umap_coords$condition <- metadata$condition
-
-    plot <- ggplot(data = umap_coords, aes(x = UMAP_1, y = UMAP_2, color = !!sym(color_by)))+
-        geom_point(alpha=1, size=0.6)+
+    if (color_by == 'none') {
+        plot <- ggplot(data = umap_coords, aes(x = UMAP_1, y = UMAP_2))
+        color_name <- ''
+    } else {
+        plot <- ggplot(data = umap_coords, aes(x = UMAP_1, y = UMAP_2, color = !!sym(color_by)))
+        color_name <- paste0('_color-by-', color_by)
+    }
+    plot <- plot + geom_point(alpha=1, size=0.6)+
         guides(color = guide_legend(override.aes = list(title = "",alpha = 1,size = 4)))+
         theme(
             strip.text.y = element_text(angle = 0),
@@ -159,7 +164,7 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     } else {
         split_name <- '_'
     }
-    plot_name <- paste0('umap-color-by-', color_by, split_name, 'obj-type-', obj_type, '_pcs-', pcs,
+    plot_name <- paste0('umap', color_name, split_name, 'obj-type-', obj_type, '_pcs-', pcs,
                         '_res-', res, '_min-dist-', min_dist, '_nn-', nn, '.png')
 	ggsave(paste0(plot_dir, 'cells/', plot_name), plot = plot,width = width,height = height)
 }

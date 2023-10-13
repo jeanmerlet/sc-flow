@@ -63,7 +63,7 @@ option_list <- list(
     make_option(
         c('--color_by'),
         type='character',
-        default=NULL,
+        default='none',
         help='what to color plots by. valid: sample_ids, condition, clusters'
     ),
     make_option(
