@@ -132,19 +132,20 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     }
     umap_coords_path <- paste0(meta_dir, 'umap_pcs-', pcs, '_min-dist-', min_dist, '_nn-', nn, '.tsv')
     umap_coords <- read.table(umap_coords_path, sep='\t', header=TRUE)
-    if (color_by == 'clusters') {
+    if (color_by == 'clusters' | split_by == 'clusters') {
         clusters_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type, '_resolution-', res, '_num-pcs-', pcs, '.tsv')
         clusters <- read.table(clusters_path, sep='\t', header=TRUE)
         umap_coords$clusters <- factor(clusters$clusters, levels=sort(unique(clusters$clusters)))
-    } else {
-        metadata_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
-        metadata <- read.table(metadata_path, sep='\t', header=TRUE)
-        umap_coords$sample_ids <- metadata$sample_ids
-        if (color_by  == 'condition') { umap_coords$condition <- metadata$condition }
     }
+
+    # always load sample ids and condition metadata
+    metadata_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
+    metadata <- read.table(metadata_path, sep='\t', header=TRUE)
+    umap_coords$sample_ids <- metadata$sample_ids
+    umap_coords$condition <- metadata$condition
+
     plot <- ggplot(data = umap_coords, aes(x = UMAP_1, y = UMAP_2, color = !!sym(color_by)))+
-        geom_point(alpha = 1, size = 1.0, shape=1, stroke=0.8)+
-        scale_shape(solid=FALSE)+
+        geom_point(alpha=1, size=0.6)+
         guides(color = guide_legend(override.aes = list(title = "",alpha = 1,size = 4)))+
         theme(
             strip.text.y = element_text(angle = 0),
@@ -152,8 +153,14 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
         )+
         xlab("UMAP 1")+
         ylab("UMAP 2")
-    plot_name <- paste0('umap-color-by-', color_by, '_obj-type-', obj_type, '_pcs-', pcs, '_res-', res,
-                        '_min-dist-', min_dist, '_nn-', nn, '.png')
+    if (split_by != 'none') {
+        plot <- plot + facet_wrap(as.formula(paste("~", split_by)))
+        split_name <- paste0('_split-by-', split_by, '_')
+    } else {
+        split_name <- '_'
+    }
+    plot_name <- paste0('umap-color-by-', color_by, split_name, 'obj-type-', obj_type, '_pcs-', pcs,
+                        '_res-', res, '_min-dist-', min_dist, '_nn-', nn, '.png')
 	ggsave(paste0(plot_dir, 'cells/', plot_name), plot = plot,width = width,height = height)
 }
 

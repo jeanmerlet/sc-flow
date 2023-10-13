@@ -69,7 +69,7 @@ option_list <- list(
     make_option(
         c('--split_by'),
         type='character',
-        default=NULL,
+        default='none',
         help='what to split plots by. valid: sample_ids, condition, clusters'
     ),
     make_option(
