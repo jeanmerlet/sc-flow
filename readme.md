@@ -3,10 +3,13 @@
 ## Broad order of steps
 In general, a typical scRNA-seq workflow will go through these steps (in order).
 1. align
-2. preprocess
-3. cluster
-4. plot
-5. diff\_exp
+
+## NOTE: fix align arguments / options to appear in argparse
+
+1. preprocess
+2. cluster
+3. plot
+4. diff\_exp
 
 Each of these corresponds to an argument for the ```--workflow``` command in the sc-flow pipeline.
 1. align: ```--workflow align```
