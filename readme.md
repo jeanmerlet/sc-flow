@@ -1,4 +1,4 @@
-# Sc-flow
+# sc-flow
 
 ## Broad order of steps
 In general, a typical scRNA-seq workflow will go through these steps (in order).
