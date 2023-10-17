@@ -488,8 +488,8 @@ if (!run_r) {
     } else if (workflow == 'plot') {
         source('./scripts/plots/plots.R')
         if (plot_type == 'qc') {
-            plot_qc(metadata, xvar, yvar, color_by, mito_cutoff,
-                    plot_dir, plot_name, width, height)
+            plot_qc(metadata, color_by, mito_cutoff,
+                    plot_dir, width, height)
         } else if (plot_type == 'umap') {
             source('./scripts/seurat/umap.R')
             gen_umap(meta_dir, pcs, min_dist, nn, use_integrated)

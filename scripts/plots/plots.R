@@ -26,7 +26,7 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	metadata[[yvar]] <- as.numeric(metadata[[yvar]])
-	if(condition) {
+	if (color_by != 'none') {
 		plot <- plot + ggplot(data = metadata,aes_string(x = xvar,y = yvar,color = condition,fill = condition)) + scale_fill_discrete(name = "Condition") + scale_color_discrete(name = "Condition")
 	} else {
         
@@ -92,8 +92,8 @@ density_plot <- function(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plo
 
 # Qc plot workflow
 
-plot_qc <- function(metadata, xvar, yvar, condition, mito_cutoff,
-                    plot_dir, plot_name, width, height) {
+plot_qc <- function(metadata, condition, mito_cutoff,
+                    plot_dir, width, height) {
     xvar <- 'sample_ids'
     yvar <- 'Mito'
     meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
