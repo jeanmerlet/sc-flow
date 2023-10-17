@@ -16,19 +16,19 @@ Each of these corresponds to an argument for the ```--workflow``` command in the
 5. diff\_exp: ```--workflow diff_exp```
 
 ## Example workflow
-1. Rscript sc-flow.R --workflow align (options that we have forgotten)
-2. Rscript sc-flow.R --workflow preprocess --species mouse --load_meta
-3. Rscript sc-flow.R --workflow plot --plot_type qc --species mouse --color_by condition
+1. ```Rscript sc-flow.R --workflow align``` (options that we have forgotten)
+2. ```Rscript sc-flow.R --workflow preprocess --species mouse --load_meta```
+3. ```Rscript sc-flow.R --workflow plot --plot_type qc --species mouse --color_by condition```
 
 ## NOTE: fix qc plots to accept color\_by instead of condition and look at split\_by for density plots
 
-1. Rscript sc-flow.R --workflow plot --plot_type umap --color_by sample_ids
-2. Rscript sc-flow.R --workflow plot --plot_type umap --color_by condition
-3. Rscript sc-flow.R --workflow cluster --resolution 0.5
-4. Rscript sc-flow.R --workflow plot --plot_type umap --color_by clusters
-5. Rscript sc-flow.R --workflow plot --plot_type umap --color_by clusters --split_by condition
-6. Rscript sc-flow.R --workflow diff_exp --diff_type cluster
-7. Rscript sc-flow.R --workflow diff_exp --diff_type condition (NOT YET IMPLEMENTED)
+1. ```Rscript sc-flow.R --workflow plot --plot_type umap --color_by sample_ids```
+2. ```Rscript sc-flow.R --workflow plot --plot_type umap --color_by condition```
+3. ```Rscript sc-flow.R --workflow cluster --resolution 0.5```
+4. ```Rscript sc-flow.R --workflow plot --plot_type umap --color_by clusters```
+5. ```Rscript sc-flow.R --workflow plot --plot_type umap --color_by clusters --split_by condition```
+6. ```Rscript sc-flow.R --workflow diff_exp --diff_type cluster```
+7. ```Rscript sc-flow.R --workflow diff_exp --diff_type condition``` (NOT YET IMPLEMENTED)
 
 ## NOTE: implement diff\_exp by condition, change diff\_type cluster to clusters
 
