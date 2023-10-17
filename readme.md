@@ -35,6 +35,7 @@ Each of these corresponds to an argument for the ```--workflow``` command in the
 
 ## NOTE: implement diff\_exp by condition, change diff\_type cluster to clusters
 
+## packages / env
 
 ## align
 
@@ -49,3 +50,6 @@ The preprocess workflow has the following options.
 
 rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta)
 
+
+## NOTE: talk about interactivity with ```--run\_r```
+## ANOTHER NOTE: make sure ```--run\_r``` works with some weird species options stuff for preprocess / qc plot
