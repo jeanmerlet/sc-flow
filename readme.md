@@ -9,5 +9,5 @@ In general, a typical scRNA-seq workflow will go through these steps (in order):
 4. plot
 5. diff\_exp
 
-Each of these corresponds to an argument for the ~~~--workflow~~~ command in the sc-flow pipeline:
-1. align: ~~~--workflow align~~~
+Each of these corresponds to an argument for the ```--workflow``` command in the sc-flow pipeline:
+1. align: ```--workflow align```
