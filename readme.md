@@ -1,5 +1,10 @@
 # sc-flow
 
+## packages / env
+
+
+
+
 ## Broad order of steps
 In general, a typical scRNA-seq workflow will go through these steps (in order).
 1. align
@@ -35,7 +40,6 @@ Each of these corresponds to an argument for the ```--workflow``` command in the
 
 ## NOTE: implement diff\_exp by condition, change diff\_type cluster to clusters
 
-## packages / env
 
 ## align
 
