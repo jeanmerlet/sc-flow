@@ -1,9 +1,16 @@
 # sc-flow
 
-## packages / env
+## setup
+This package is designed for use on frontier and assumes you have a working conda or miniconda installation.
+To generate your own copy of our R env, run the following commands:
+1. ```git clone https://github.com/jeanmerlet/sc-flow.git```
+2. In /env ```echo "prefix: /path/to/your/env" >> frontier_seurat.yml```
+3. ```conda env create -f frontier_seurat.yml```
+4. ```./project_init.sh```
+5. Place your fastqs in the /data/raw directory
+6. Create and fill a /data/metadata/sample_meta.tsv file (see [metadata])
 
-
-
+# NOTE: test yml env creation ^^
 
 ## Broad order of steps
 In general, a typical scRNA-seq workflow will go through these steps (in order).
@@ -51,6 +58,7 @@ The preprocess workflow has the following options.
 4. ```load_meta```
 
 
+## Metadata
 
 rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta)
 
