@@ -8,7 +8,7 @@ To generate your own copy of our R env, do the following steps:
 3. In /env, run ```conda env create -f frontier_seurat.yml```
 4. In the root directory, run ```./project_init.sh```
 5. Place your fastqs in /data/raw
-6. Create and fill a /data/metadata/sample_meta.tsv file (see [Metadata](#metadata))
+6. Create and fill a /data/metadata/sample_meta.tsv file (see [metadata](#metadata))
 
 # NOTE: test yml env creation ^^
 
@@ -60,7 +60,7 @@ The preprocess workflow has the following options.
 
 ## Metadata
 
-rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta)
+rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta
 
 
 ## NOTE: talk about interactivity with ```--run\_r```
