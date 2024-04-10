@@ -185,8 +185,8 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
 
 
 # DEG volcano plot
-plot_volcano <- function(deg_dir, plot_dir, diff_type, p_value, p_cutoff, log2fc, top_n_genes,width, height) {
-    degs_path <- paste0(deg_dir, 'degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
+plot_volcano <- function(de_dir, plot_dir, diff_type, p_value, p_cutoff, log2fc, top_n_genes,width, height) {
+    degs_path <- paste0(de_dir, 'degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
     degs <- read.table(degs_path, sep='\t', header=TRUE, row.names=1)
     # add significance column
     degs <- degs %>% mutate(
