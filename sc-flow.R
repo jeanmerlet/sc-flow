@@ -465,6 +465,10 @@ if (!run_r) {
         job_paths <- write_plot_job(raw_args)
     } else if (workflow == 'diff_exp') {
 #TODO: do a check for diff_type and move that check to error function
+	if(is.null(diff_type) | !(diff_type %in% valid_diff_type_list)) {
+	    print(paste0('ERROR: missing or invalid diff type specified (',diff_type,').'))
+            quit(save = 'no')
+	}
         job_paths <- write_diff_exp_job(raw_args)
     }
     # submit the job from the command line
