@@ -6,9 +6,9 @@ suppressPackageStartupMessages({
 # /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes
 # /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat
 
-raw_args <- paste0(commandArgs(trailingOnly = TRUE), collapse=' ')
+raw_args <- paste0(commandArgs(trailingOnly = TRUE),collapse=' ')
 
-plan('multicore', workers = 8)
+plan('multicore',workers = 8)
 options(future.rng.onMisuse = "ignore")
 options(future.globals.maxSize = 100 * 1024^3)
 
@@ -17,6 +17,7 @@ obj_dir <- './data/seurat-objects/'
 plot_dir <- './plots/'
 meta_dir <- './data/metadata/'
 de_dir <- './data/de/'
+bam_dir <- './data/bam/'
 
 
 #TODO: standardize timing print statements
@@ -127,12 +128,6 @@ option_list <- list(
         help='y axis label'
     ),
     make_option(
-        c('--facet_var'),
-        type='character',
-        default=NULL,
-        help='subplots by factor'
-    ),
-    make_option(
         c('--resolution'),
         type='numeric',
         default=0.3,
@@ -192,13 +187,19 @@ option_list <- list(
         type='logical',
         action='store_true',
         default=FALSE,
-        help='whether to load sample metadata from the user meta file (sample_meta.tsv)',
+        help='whether to load sample metadata from the user meta file (sample_meta.tsv)'
     ),
     make_option(
         c('--diff_type'),
         type='character',
         default='cluster',
         help='type of differential expression comparison to run'
+    ),
+    make_option(
+        c('--condition_group'),
+        type='character',
+        default=NULL,
+        help='group level for the condition variable'
     )
 )
 
@@ -277,31 +278,33 @@ script <- c(
     "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes",
     "srun -N 1 -n 1 multiqc $out_fastqc_dir -n fastqc_report.html -o $out_qc_dir --no-data-dir"
     )
-    out_paths <- c("./scripts/jobs/fastqc.sbatch")
-    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    out_path <- "./scripts/jobs/fastqc.sbatch"
+    out_paths <- c(out_path)
+    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
 
 script <- c(
     "#!/bin/bash",
     "",
     "#SBATCH -A SYB111",
-    paste0("#SBATCH -N ", num_paired_files),
+    paste0("#SBATCH -N ",num_paired_files),
     "#SBATCH -t 6:00:00",
     "#SBATCH -J STAR_align",
     "#SBATCH -o ./scripts/alignment/logs/align.%J.out",
     "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
     "",
     "module load python",
-    paste0("echo star_bin: ", star_bin),
+    paste0("echo star_bin: ",star_bin),
     "echo",
-    paste0("srun -n ", num_paired_files, "python ./scripts/alignment/mpi_align.py ", raw_args),
+    paste0("srun -n ",num_paired_files,"python ./scripts/alignment/mpi_align.py ",raw_args),
     "",
     "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes",
-    paste0("mv ", out_align_dir, "/*Log*.out", out_align_dir, "/logs"),
-    paste0("srun -N 1 -n 1 multiqc ", out_align_dir, "/logs -n align_report.html -o ", out_qc_dir, " --no-data-dir"),
-    paste0("mv ", out_align_dir, "/*Solo.out ", out_mtx_dir)
+    paste0("mv ",bam_dir,"/*Log*.out",bam_dir,"/logs"),
+    paste0("srun -N 1 -n 1 multiqc ",bam_dir,"/logs -n align_report.html -o ",out_qc_dir," --no-data-dir"),
+    paste0("mv ",bam_dir,"/*Solo.out ",mtx_dir)
     )
-    out_paths <- c(out_paths, "./scripts/jobs/align.sbatch")
-    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    out_path <- "./scripts/jobs/align.sbatch"
+    out_paths <- c(out_paths,out_path)
+    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
     return(out_paths)
 }
 
@@ -318,13 +321,12 @@ script <- c(
     "#SBATCH -o ./scripts/preprocess/logs/preprocess.%J.out",
     "#SBATCH -e ./scripts/preprocess/logs/preprocess.%J.err",
     "",
-    #"source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
     "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
     "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- "./scripts/jobs/preprocess.sbatch"
-    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
     return(c(out_path))
 }
 
@@ -341,12 +343,12 @@ script <- c(
     "#SBATCH -o ./scripts/preprocess/logs/impute.%J.out",
     "#SBATCH -e ./scripts/preprocess/logs/impute.%J.err",
     "",
-    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
+    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
     "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- "./scripts/jobs/impute.sbatch"
-    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
     return(c(out_path))
 }
 
@@ -363,13 +365,12 @@ script <- c(
     "#SBATCH -o ./scripts/seurat/logs/cluster.%J.out",
     "#SBATCH -e ./scripts/seurat/logs/cluster.%J.err",
     "",
-    #"source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
     "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
     "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- "./scripts/jobs/cluster.sbatch"
-    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
     return(c(out_path))
 }
 
@@ -382,21 +383,21 @@ script <- c(
     "#SBATCH -A SYB111",
     "#SBATCH -N 1",
     "#SBATCH -t 1:00:00",
-    paste0("#SBATCH -J plot_", plot_type),
-    paste0("#SBATCH -o ./scripts/plots/logs/plot_", plot_type, ".%J.out"),
-    paste0("#SBATCH -e ./scripts/plots/logs/plot_", plot_type, ".%J.err"),
+    paste0("#SBATCH -J plot_",plot_type),
+    paste0("#SBATCH -o ./scripts/plots/logs/plot_",plot_type,".%J.out"),
+    paste0("#SBATCH -e ./scripts/plots/logs/plot_",plot_type,".%J.err"),
     "",
-    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes",
+    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
     "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ", raw_args)
+    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
-    out_path <- paste0("./scripts/jobs/plot_", plot_type, ".sbatch")
-    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    out_path <- paste0("./scripts/jobs/plot_",plot_type,".sbatch")
+    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
     return(c(out_path))
 }
 
 submit_job <- function(path) {
-    command <- paste0('sbatch ', path)
+    command <- paste0('sbatch ',path)
     system(command)
 }
 
@@ -408,45 +409,45 @@ script <- c(
     "",
     "#SBATCH -A SYB111",
     "#SBATCH -N 1",
-    "#SBATCH -t 2:00:00",
-    paste0("#SBATCH -J diff-exp_", diff_type),
-    paste0("#SBATCH -o ./scripts/seurat/logs/diff-exp_", diff_type, ".%J.out"),
-    paste0("#SBATCH -e ./scripts/seurat/logs/diff-exp_", diff_type, ".%J.err"),
+    "#SBATCH -t 4:00:00",
+    paste0("#SBATCH -J diff-exp_",diff_type),
+    paste0("#SBATCH -o ./scripts/seurat/logs/diff-exp_",diff_type,".%J.out"),
+    paste0("#SBATCH -e ./scripts/seurat/logs/diff-exp_",diff_type,".%J.err"),
     "",
     "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
     "",
-    paste0("srun -n 1 -c 8 Rscript ./sc-flow.R ", raw_args)
+    paste0("srun -n 1 -c 8 Rscript ./sc-flow.R ",raw_args)
     )
-    out_path <- paste0("./scripts/jobs/diff-exp_", diff_type, ".sbatch")
-    write.table(script, file=out_path, sep="\n", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    out_path <- paste0("./scripts/jobs/diff-exp_",diff_type,".sbatch")
+    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
     return(c(out_path))
 }
 
 submit_job <- function(path) {
-    command <- paste0('sbatch ', path)
+    command <- paste0('sbatch ',path)
     system(command)
 }
 
 
 ### WORKFLOW ###
-valid_workflow_list <- c('align', 'preprocess', 'plot', 'impute', 'cluster', 'diff_exp')
-valid_plot_type_list <- c('qc', 'umap', 'volcano')
+valid_workflow_list <- c('align','preprocess','plot','impute','cluster','diff_exp')
+valid_plot_type_list <- c('qc','umap','volcano')
 valid_diff_type_list <- c('cluster')
 
 
 if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
-    print(paste0('ERROR: missing or invalid workflow specified (', workflow, ').'))
-    quit(save='no')
+    print(paste0('ERROR: missing or invalid workflow specified (',workflow,').'))
+    quit(save = 'no')
 }
 
 
 if (!run_r) {
     raw_args <- paste0(raw_args, ' --run_r')
     if (workflow == 'align') {
-        raw_args <- check_species(raw_args, mito_cutoff)
+        raw_args <- check_species(raw_args,mito_cutoff)
         job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
-        raw_args <- check_species(raw_args, mito_cutoff)
+        raw_args <- check_species(raw_args,mito_cutoff)
         job_paths <- write_preprocess_job(raw_args)
     } else if (workflow == 'impute') {
         job_paths <- write_impute_job(raw_args)
@@ -455,11 +456,11 @@ if (!run_r) {
     } else if (workflow == 'plot') {
 #TODO: move to error function and have work when doing interactively with --run_r
         if (is.null(plot_type) | !(plot_type %in% valid_plot_type_list)) {
-            print(paste0('ERROR: missing or invalid plot type specified (', plot_type, ').'))
-            quit(save='no')
+            print(paste0('ERROR: missing or invalid plot type specified (',plot_type,').'))
+            quit(save = 'no')
         }
         if (plot_type == 'qc') {
-            raw_args <- check_species(raw_args, mito_cutoff)
+            raw_args <- check_species(raw_args,mito_cutoff)
         }
         job_paths <- write_plot_job(raw_args)
     } else if (workflow == 'diff_exp') {
@@ -476,7 +477,7 @@ if (!run_r) {
     if (workflow == 'preprocess') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
-        run_preprocess(mtx_dir, meta_dir, rare_gene_cutoff, mito_cutoff, upper_umi_cutoff, load_meta)
+        run_preprocess(mtx_dir,meta_dir,rare_gene_cutoff,mito_cutoff,upper_umi_cutoff,load_meta)
     } else if (workflow == 'impute') {
         source('./scripts/preprocess/preprocess.R')
         source('./scripts/preprocess/alra.R')
@@ -484,20 +485,17 @@ if (!run_r) {
         apply_imputation(obj, out_impute_dir)
     } else if (workflow == 'cluster') {
         source('./scripts/seurat/cluster.R')
-        cluster(meta_dir, pcs, resolution, use_integrated)
+        cluster(meta_dir,pcs,resolution,use_integrated)
     } else if (workflow == 'plot') {
         source('./scripts/plots/plots.R')
         if (plot_type == 'qc') {
-            plot_qc(metadata, color_by, mito_cutoff,
-                    plot_dir, width, height)
+            plot_qc(meta_dir,mito_cutoff,plot_dir,width,height)
         } else if (plot_type == 'umap') {
             source('./scripts/seurat/umap.R')
-            gen_umap(meta_dir, pcs, min_dist, nn, use_integrated)
-            plot_umap(meta_dir, plot_dir, width, height, pcs, resolution,
-                      use_integrated, min_dist, nn, color_by, split_by)
+            gen_umap(meta_dir,pcs,min_dist,nn,use_integrated)
+            plot_umap(meta_dir,plot_dir,width,height,pcs,resolution,use_integrated,min_dist,nn,color_by,split_by)
         } else if (plot_type == 'volcano') {
-            plot_volcano(de_dir, plot_dir, diff_type, p_value, p_cutoff,
-                         log2fc, top_n_genes, width, height)
+            plot_volcano(de_dir,plot_dir,diff_type,p_value,p_cutoff,log2fc,top_n_genes,width,height)
         }
     } else if (workflow == 'diff_exp') {
         source('./scripts/seurat/diff_exp.R')
@@ -509,9 +507,8 @@ if (!run_r) {
         } else {
             obj_type <- 'preprocessed'
         }
-        meta_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type, '_resolution-',
-                            resolution, '_num-pcs-', pcs, '.tsv')
-        obj <- add_metadata(obj, meta_path)
-        run_diff_exp(obj, de_dir, diff_type, p_value)
+        meta_path <- paste0(meta_dir,'clusters_obj-type-',obj_type,'_resolution-',resolution,'_num-pcs-',pcs,'.tsv')
+        obj <- add_metadata(obj,meta_path)
+        run_diff_exp(obj,de_dir,diff_type,condition_group,p_value)
     }
 }
