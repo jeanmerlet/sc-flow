@@ -432,7 +432,7 @@ submit_job <- function(path) {
 ### WORKFLOW ###
 valid_workflow_list <- c('align','preprocess','plot','impute','cluster','diff_exp')
 valid_plot_type_list <- c('qc','umap','volcano')
-valid_diff_type_list <- c('cluster')
+valid_diff_type_list <- c('cluster','condition')
 
 
 if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
