@@ -12,12 +12,13 @@ plan('multicore',workers = 8)
 options(future.rng.onMisuse = "ignore")
 options(future.globals.maxSize = 100 * 1024^3)
 
+raw_dir <- './data/raw/'
+bam_dir <- './data/bam/'
 mtx_dir <- './data/count-matrices/'
 obj_dir <- './data/seurat-objects/'
 plot_dir <- './plots/'
 meta_dir <- './data/metadata/'
 de_dir <- './data/de/'
-bam_dir <- './data/bam/'
 
 
 #TODO: standardize timing print statements
