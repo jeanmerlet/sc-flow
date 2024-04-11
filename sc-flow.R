@@ -42,6 +42,36 @@ option_list <- list(
         help='what kind of workflow to run'
     ),
     make_option(
+        c('--genome_dir'),
+        type='character',
+        default=NULL,
+        help='specify full path to genome'
+    ),
+    make_option(
+        c('--bc_whitelist'),
+        type='character',
+        default=NULL,
+        help='specify full path to barcode whitelist'
+    ),
+    make_option(
+        c('--bc_length'),
+        type='integer',
+        default=16,
+        help='barcode length'
+    ),
+    make_option(
+        c('--umi_start'),
+        type='integer',
+        default=17,
+        help='barcode length'
+    ),
+    make_option(
+        c('--umi_start'),
+        type='integer', 
+        default=12,
+        help='umi length'
+    ),
+    make_option(
         c('--obj_path'),
         type='character',
         default=NULL,
