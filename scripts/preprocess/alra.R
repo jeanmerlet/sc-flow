@@ -1,11 +1,14 @@
+# Libraries
+suppressPackageStartupMessages({
+    library(rsvd)
+    library(fastRPCA)
+})
 
 randomized.svd <- function(A,K, q, method = 'rsvd', mkl.seed = -1) {
     out <- setNames(vector("list", 3), c("u", "d", "v"))
     if (method == 'rsvd') {
-        library(rsvd)
         out <- rsvd(A,K,q=q)
     }else if (method == 'rsvd-mkl') {
-        library(fastRPCA)
         fastPCAOut <- fastPCA(A, k=K, its=q, l=(K+10), seed=mkl.seed)
         out$u <- fastPCAOut$U
         out$v <- fastPCAOut$V
