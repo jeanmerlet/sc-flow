@@ -14,6 +14,7 @@ options(future.globals.maxSize = 100 * 1024^3)
 
 raw_dir <- './data/raw/'
 fastqc <- '/lustre/orion/syb111/proj-shared/Tools/frontier/FastQC/fastqc'
+fastqc_out_dir <- './qc/reads'
 star <- '/lustre/orion/syb111/proj-shared/Tools/frontier/STAR-2.7.9a/bin/Linux_x86_64/STAR'
 bam_dir <- './data/bam/'
 mtx_dir <- './data/count-matrices/'
@@ -267,21 +268,21 @@ script <- c(
     "#!/bin/bash",
     "",
     "#SBATCH -A syb111",
-    "#SBATCH -N $num_paired_files",
+    paste0("#SBATCH -N ",num_paired_files), # take raw_dir and calculate
     "#SBATCH -t 6:00:00",
     "#SBATCH -J fastqc",
     "#SBATCH -o ./scripts/alignment/logs/fastqc.%J.out",
     "#SBATCH -e ./scripts/alignment/logs/fastqc.%J.err",
     "",
     "module load python",
-    "echo fastqc_bin: $fastqc_bin",
+    paste0("echo fastqc_bin: ",fastqc), # placeholder
     "echo",
-    "srun -n $num_files python ./scripts/alignment/mpi_fastqc.py $fastqc_bin $data_dir $out_fastqc_dir",
+    paste0("srun -n ",$num_files," python ./scripts/alignment/mpi_fastqc.py $fastqc_bin $data_dir $out_fastqc_dir"), # placeholders
     "",
     "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
     "conda activate sc-flow",
     "",
-    "srun -N 1 -n 1 multiqc $out_fastqc_dir -n fastqc_report.html -o $out_qc_dir --no-data-dir"
+    paste0("srun -N 1 -n 1 multiqc ",fastqc_out_dir," -n fastqc_report.html -o $out_qc_dir --no-data-dir") # add path to raw_dir, qc_dir, and raw_args
     )
     out_path <- "./scripts/jobs/fastqc.sbatch"
     out_paths <- c(out_path)
@@ -291,14 +292,14 @@ script <- c(
     "#!/bin/bash",
     "",
     "#SBATCH -A SYB111",
-    paste0("#SBATCH -N ",num_paired_files),
+    paste0("#SBATCH -N ",num_paired_files), # take raw_dir and calculate
     "#SBATCH -t 6:00:00",
     "#SBATCH -J STAR_align",
     "#SBATCH -o ./scripts/alignment/logs/align.%J.out",
     "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
     "",
     "module load python",
-    paste0("echo star_bin: ",star_bin),
+    paste0("echo star_bin: ",star), # placeholder 
     "echo",
     paste0("srun -n ",num_paired_files,"python ./scripts/alignment/mpi_align.py ",raw_args),
     "",
