@@ -275,7 +275,9 @@ script <- c(
     "echo",
     "srun -n $num_files python ./scripts/alignment/mpi_fastqc.py $fastqc_bin $data_dir $out_fastqc_dir",
     "",
-    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes",
+    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+    "conda activate sc-flow",
+    "",
     "srun -N 1 -n 1 multiqc $out_fastqc_dir -n fastqc_report.html -o $out_qc_dir --no-data-dir"
     )
     out_path <- "./scripts/jobs/fastqc.sbatch"
@@ -297,7 +299,9 @@ script <- c(
     "echo",
     paste0("srun -n ",num_paired_files,"python ./scripts/alignment/mpi_align.py ",raw_args),
     "",
-    "source activate /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/python_andes",
+    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+    "conda activate sc-flow",
+    "",
     paste0("mv ",bam_dir,"/*Log*.out",bam_dir,"/logs"),
     paste0("srun -N 1 -n 1 multiqc ",bam_dir,"/logs -n align_report.html -o ",out_qc_dir," --no-data-dir"),
     paste0("mv ",bam_dir,"/*Solo.out ",mtx_dir)
@@ -321,7 +325,8 @@ script <- c(
     "#SBATCH -o ./scripts/preprocess/logs/preprocess.%J.out",
     "#SBATCH -e ./scripts/preprocess/logs/preprocess.%J.err",
     "",
-    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
+    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+    "conda activate sc-flow",
     "",
     paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
@@ -343,7 +348,8 @@ script <- c(
     "#SBATCH -o ./scripts/preprocess/logs/impute.%J.out",
     "#SBATCH -e ./scripts/preprocess/logs/impute.%J.err",
     "",
-    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
+    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+    "conda activate sc-flow",
     "",
     paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
@@ -365,7 +371,8 @@ script <- c(
     "#SBATCH -o ./scripts/seurat/logs/cluster.%J.out",
     "#SBATCH -e ./scripts/seurat/logs/cluster.%J.err",
     "",
-    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
+    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+    "conda activate sc-flow",
     "",
     paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
@@ -387,7 +394,8 @@ script <- c(
     paste0("#SBATCH -o ./scripts/plots/logs/plot_",plot_type,".%J.out"),
     paste0("#SBATCH -e ./scripts/plots/logs/plot_",plot_type,".%J.err"),
     "",
-    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
+    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+    "conda activate sc-flow",
     "",
     paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
@@ -414,7 +422,8 @@ script <- c(
     paste0("#SBATCH -o ./scripts/seurat/logs/diff-exp_",diff_type,".%J.out"),
     paste0("#SBATCH -e ./scripts/seurat/logs/diff-exp_",diff_type,".%J.err"),
     "",
-    "source activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat",
+    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+    "conda activate sc-flow",
     "",
     paste0("srun -n 1 -c 8 Rscript ./sc-flow.R ",raw_args)
     )

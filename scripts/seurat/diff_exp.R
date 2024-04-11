@@ -10,12 +10,18 @@ options(future.globals.maxSize = 100000 * 1024^2,future.rng.onMisue = "ignore")
 
 run_diff_exp <- function(obj, de_dir, diff_type, condition_group, p_value) {
     start_time <- Sys.time()
+    print(start_time)
     Idents(obj) <- obj@meta.data$clusters
+    print("changed Idents")
     obj <- FindVariableFeatures(obj)
+    print("found variable features")
     if (diff_type == 'cluster') {
         plan('multicore',workers = 8)
         markers <- FindAllMarkers(obj, assay='RNA')
     } else if (diff_type == 'condition') {
+	print(diff_type)
+        print(condition_group)
+	print("starting DE")
         cl <- makeCluster(8)
         registerDoParallel(cl)
         markers <- foreach(clust = sort(unique(obj$clusters)),.packages = c("Seurat")) %dopar% {
@@ -25,7 +31,8 @@ run_diff_exp <- function(obj, de_dir, diff_type, condition_group, p_value) {
             return(test)
         }
         stopCluster(cl)
-        markers <- rbindlist(markers)    
+        markers <- rbindlist(markers)
+        print("completed DE")	
     }
     markers <- markers %>% filter(p_val_adj < p_value) %>% arrange(clusters, desc(avg_log2FC)) %>% data.frame()
     filename <- paste0('degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
