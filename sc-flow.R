@@ -13,6 +13,7 @@ options(future.rng.onMisuse = "ignore")
 options(future.globals.maxSize = 100 * 1024^3)
 
 raw_dir <- './data/raw/'
+fastqc <- '/lustre/orion/syb111/proj-shared/Tools/frontier/FastQC/fastqc'
 star <- '/lustre/orion/syb111/proj-shared/Tools/frontier/STAR-2.7.9a/bin/Linux_x86_64/STAR'
 bam_dir <- './data/bam/'
 mtx_dir <- './data/count-matrices/'
