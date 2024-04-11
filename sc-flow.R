@@ -14,7 +14,8 @@ options(future.globals.maxSize = 100 * 1024^3)
 
 raw_dir <- './data/raw/'
 fastqc <- '/lustre/orion/syb111/proj-shared/Tools/frontier/FastQC/fastqc'
-fastqc_out_dir <- './qc/reads'
+qc_dir <- './qc/'
+fastqc_out_dir <- paste0(qc_dir,'reads')
 star <- '/lustre/orion/syb111/proj-shared/Tools/frontier/STAR-2.7.9a/bin/Linux_x86_64/STAR'
 bam_dir <- './data/bam/'
 mtx_dir <- './data/count-matrices/'
@@ -277,12 +278,12 @@ script <- c(
     "module load python",
     paste0("echo fastqc_bin: ",fastqc), # placeholder
     "echo",
-    paste0("srun -n ",$num_files," python ./scripts/alignment/mpi_fastqc.py $fastqc_bin $data_dir $out_fastqc_dir"), # placeholders
+    paste0("srun -n ",num_files," python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",fastqc_out_dir," ",fastqc_out_dir), # placeholders
     "",
     "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
     "conda activate sc-flow",
     "",
-    paste0("srun -N 1 -n 1 multiqc ",fastqc_out_dir," -n fastqc_report.html -o $out_qc_dir --no-data-dir") # add path to raw_dir, qc_dir, and raw_args
+    paste0("srun -N 1 -n 1 multiqc ",fastqc_out_dir," -n fastqc_report.html -o ",fastqc_out_dir," --no-data-dir") # add path to raw_dir, qc_dir, and raw_args
     )
     out_path <- "./scripts/jobs/fastqc.sbatch"
     out_paths <- c(out_path)
@@ -301,14 +302,14 @@ script <- c(
     "module load python",
     paste0("echo star_bin: ",star), # placeholder 
     "echo",
-    paste0("srun -n ",num_paired_files,"python ./scripts/alignment/mpi_align.py ",raw_args),
+    paste0("srun -n ",num_paired_files,"python ./scripts/alignment/mpi_align.py ",raw_args), # placeholders
     "",
     "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
     "conda activate sc-flow",
     "",
-    paste0("mv ",bam_dir,"/*Log*.out",bam_dir,"/logs"),
-    paste0("srun -N 1 -n 1 multiqc ",bam_dir,"/logs -n align_report.html -o ",out_qc_dir," --no-data-dir"),
-    paste0("mv ",bam_dir,"/*Solo.out ",mtx_dir)
+    paste0("mv ",bam_dir,"/*Log*.out",bam_dir,"/logs"), # placeholders
+    paste0("srun -N 1 -n 1 multiqc ",bam_dir,"/logs -n align_report.html -o ",qc_dir," --no-data-dir"), # placeholders
+    paste0("mv ",bam_dir,"/*Solo.out ",mtx_dir) # placeholders
     )
     out_path <- "./scripts/jobs/align.sbatch"
     out_paths <- c(out_paths,out_path)
