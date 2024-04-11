@@ -66,7 +66,7 @@ option_list <- list(
         help='barcode length'
     ),
     make_option(
-        c('--umi_start'),
+        c('--umi_length'),
         type='integer', 
         default=12,
         help='umi length'
