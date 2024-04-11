@@ -1,8 +1,8 @@
 # Libraries
-suppressPackageStartupMessages({
+suppressWarnings(suppressPackageStartupMessages({
     library(optparse)
     library(future)
-})
+}))
 # /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes
 # /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat
 
