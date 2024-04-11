@@ -15,7 +15,7 @@ options(future.globals.maxSize = 100 * 1024^3)
 raw_dir <- './data/raw/'
 fastqc <- '/lustre/orion/syb111/proj-shared/Tools/frontier/FastQC/fastqc'
 qc_dir <- './qc/'
-fastqc_out_dir <- paste0(qc_dir,'reads')
+fastqc_out_dir <- paste0(qc_dir,'/reads')
 star <- '/lustre/orion/syb111/proj-shared/Tools/frontier/STAR-2.7.9a/bin/Linux_x86_64/STAR'
 bam_dir <- './data/bam/'
 mtx_dir <- './data/count-matrices/'
@@ -265,6 +265,8 @@ check_species <- function (raw_args, mito_cutoff) {
 
 ### jobscripts ###
 write_align_jobs <- function(raw_args) {
+num_files <- length(list.files(raw_dir))
+num_paired_files <- num_files/2
 script <- c(
     "#!/bin/bash",
     "",
