@@ -15,7 +15,7 @@ options(future.globals.maxSize = 100 * 1024^3)
 raw_dir <- './data/raw/'
 fastqc <- '/lustre/orion/syb111/proj-shared/Tools/frontier/FastQC/fastqc'
 qc_dir <- './qc/'
-fastqc_out_dir <- paste0(qc_dir,'/reads')
+fastqc_out_dir <- paste0(qc_dir,'reads')
 star <- '/lustre/orion/syb111/proj-shared/Tools/frontier/STAR-2.7.9a/bin/Linux_x86_64/STAR'
 bam_dir <- './data/bam/'
 mtx_dir <- './data/count-matrices/'
@@ -280,7 +280,7 @@ script <- c(
     "module load python",
     paste0("echo fastqc_bin: ",fastqc), # placeholder
     "echo",
-    paste0("srun -n ",num_files," python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",fastqc_out_dir," ",fastqc_out_dir), # placeholders
+    paste0("srun -n ",num_files," python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",raw_dir," ",fastqc_out_dir), # placeholders
     "",
     "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
     "conda activate sc-flow",
@@ -461,6 +461,7 @@ if (!run_r) {
     raw_args <- paste0(raw_args, ' --run_r')
     if (workflow == 'align') {
         raw_args <- check_species(raw_args,mito_cutoff)
+        raw_args <- c(star,raw_dir,bam_dir,raw_args)
         job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
         raw_args <- check_species(raw_args,mito_cutoff)
