@@ -523,6 +523,7 @@ if (!run_r) {
 	    print(paste0('ERROR: missing or invalid diff type specified (',diff_type,').'))
             quit(save = 'no')
 	}
+    	print(raw_args)
         job_paths <- write_diff_exp_job(raw_args)
     }
     # submit the job from the command line
@@ -556,17 +557,7 @@ if (!run_r) {
             plot_volcano(de_dir,plot_dir,diff_type,p_value,p_cutoff,log2fc,top_n_genes,width,height)
         }
     } else if (workflow == 'diff_exp') {
-        source('./scripts/seurat/diff_exp.R')
-        obj_path <- './data/seurat-objects/imputed.rds'
-        obj <- load_seurat_obj(obj_path)
-        #TODO: move integrated / preprocessed logic to utils
-        if (use_integrated) {
-            obj_type <- 'integrated'
-        } else {
-            obj_type <- 'preprocessed'
-        }
-        meta_path <- paste0(meta_dir,'clusters_obj-type-',obj_type,'_resolution-',resolution,'_num-pcs-',pcs,'.tsv')
-        obj <- add_metadata(obj,meta_path)
-        run_diff_exp(obj,de_dir,diff_type,condition_group,p_value)
+        source('./scripts/seurat/diff_exp.R') 
+        diff_exp(meta_dir,de_dir,diff_type,condition_group,p_value)
     }
 }
