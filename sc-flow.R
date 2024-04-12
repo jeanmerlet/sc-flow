@@ -358,6 +358,7 @@ script <- c(
     "#SBATCH -A SYB111",
     "#SBATCH -N 1",
     "#SBATCH -t 2:00:00",
+    "#SBATCH --mem=0",
     "#SBATCH -J preprocess",
     "#SBATCH -o ./scripts/preprocess/logs/preprocess.%J.out",
     "#SBATCH -e ./scripts/preprocess/logs/preprocess.%J.err",
