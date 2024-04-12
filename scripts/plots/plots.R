@@ -27,7 +27,7 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,color_by,mito_cutoff,plot_d
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	metadata[[yvar]] <- as.numeric(metadata[[yvar]])
 	if (color_by != 'none') {
-		plot <- plot + ggplot(data = metadata,aes_string(x = !!sym(xvar),y = !!sym(yvar),color = !!sym(color_by),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by) + scale_color_discrete(name = color_by)
+		plot <- plot + ggplot(data = metadata,aes(x = !!sym(xvar),y = !!sym(yvar),color = !!sym(color_by),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by) + scale_color_discrete(name = color_by)
 	} else {
 		plot <- ggplot(data = metadata, aes(x = !!sym(xvar), y = !!sym(yvar)))
 	}
