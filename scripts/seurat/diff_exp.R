@@ -10,11 +10,8 @@ options(future.globals.maxSize = 100000 * 1024^2,future.rng.onMisue = "ignore")
 
 run_diff_exp <- function(obj, de_dir, diff_type, condition_group, p_value) {
     start_time <- Sys.time()
-    print(start_time)
     Idents(obj) <- obj@meta.data$clusters
-    print("changed Idents")
     obj <- FindVariableFeatures(obj)
-    print("found variable features")
     if (diff_type == 'cluster') {
         plan('multicore',workers = 8)
         markers <- FindAllMarkers(obj, assay='RNA')
