@@ -142,7 +142,7 @@ apply_imputation <- function(obj, out_dir=NULL) {
 
 #TODO: minutes vs seconds
 apply_integration <- function(obj) {
-	start_time <- Sys.time()
+    start_time <- Sys.time()
     obj_list <- SplitObject(obj, split.by='sample_ids')
     obj_list <- lapply(X=obj_list, FUN=function(x) {
         x <- NormalizeData(x, normalization.method='LogNormalize', scale.factor=10000, verbose=FALSE)
@@ -154,7 +154,7 @@ apply_integration <- function(obj) {
     DefaultAssay(obj) <- 'integrated'
     saveRDS(obj, file="./data/seurat-objects/integrated.rds")
 	end_time <- Sys.time()
-	print(paste0("Integration runtime: ",round(end_time - start_time, 2)," minutes"))
+    print(paste0("Integration runtime: ",round(end_time - start_time, 2)," minutes"))
 }
 
 
