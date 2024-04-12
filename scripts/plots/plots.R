@@ -27,7 +27,7 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,color_by,mito_cutoff,plot_d
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	metadata[[yvar]] <- as.numeric(metadata[[yvar]])
 	if (color_by != 'none') {
-		plot <- plot + ggplot(data = metadata,aes(x = !!sym(xvar),y = !!sym(yvar),color = !!sym(color_by),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by) + scale_color_discrete(name = color_by)
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar),y = !!sym(yvar),color = !!sym(color_by),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by) + scale_color_discrete(name = color_by)
 	} else {
 		plot <- ggplot(data = metadata, aes(x = !!sym(xvar), y = !!sym(yvar)))
 	}
@@ -49,7 +49,7 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,color_by,mito_cutoff,plot_d
 bar_plot <- function(metadata,xvar,xlab,ylab,color_by,split_by,plot_dir,plot_name,width,height) {
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	if(color_by != 'none') {
-		plot <- plot + ggplot(data = metadata,aes(x = !!sym(xvar),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by)
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by)
 	} else {
 		plot <- ggplot(data = metadata,aes(x = !!sym(xvar)))
 	}
@@ -76,7 +76,7 @@ bar_plot <- function(metadata,xvar,xlab,ylab,color_by,split_by,plot_dir,plot_nam
 
 density_plot <- function(metadata,xvar,xlab,ylab,color_by,split_by,plot_dir,plot_name,width,height) {
 	if(color_by != 'none') {
-		plot <- plot + ggplot(data = metadata,aes(x = !!sym(xvar),color = !!sym(color_by))) + scale_color_discrete(name = color_by)
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar),color = !!sym(color_by))) + scale_color_discrete(name = color_by)
 	} else {
 		plot <- ggplot(data = metadata,aes(x = !!sym(xvar)))
 	}
