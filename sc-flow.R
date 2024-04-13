@@ -523,7 +523,6 @@ if (!run_r) {
 	    print(paste0('ERROR: missing or invalid diff type specified (',diff_type,').'))
             quit(save = 'no')
 	}
-    	print(raw_args)
         job_paths <- write_diff_exp_job(raw_args)
     }
     # submit the job from the command line
@@ -558,6 +557,6 @@ if (!run_r) {
         }
     } else if (workflow == 'diff_exp') {
         source('./scripts/seurat/diff_exp.R') 
-        diff_exp(meta_dir,de_dir,diff_type,condition_group,p_value)
+        diff_exp(meta_dir,resolution,pcs,use_integrated,de_dir,diff_type,condition_group,p_value)
     }
 }

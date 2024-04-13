@@ -35,19 +35,19 @@ run_diff_exp <- function(obj, de_dir, diff_type, condition_group, p_value) {
     print(paste0('Differential expression runtime: ', difftime(Sys.time(), start_time, unit='mins')))
 }
 
-diff_exp(meta_dir,de_dir,diff_type,condition_group,p_value) {
-    obj_path <- './data/seurat-objects/imputed.rds'
+diff_exp <- function(meta_dir,resolution,pcs,use_integrated,de_dir,diff_type,condition_group,p_value) {
+    obj_type <- 'imputed'
+    obj_path <- paste0(obj_dir,obj_type,'.rds')
     obj <- load_seurat_obj(obj_path)
+    if(use_integrated) {
+        obj_type <- 'integrated'
+    } else {
+        obj_type <- 'preprocessed'
+    }
     meta_path <- paste0(meta_dir,'clusters_obj-type-',obj_type,'_resolution-',resolution,'_num-pcs-',pcs,'.tsv')
     obj <- add_metadata(obj,meta_path)
     if(diff_type == "condition") {
 	meta_path <- paste0(meta_dir,'sample_meta.tsv')
-        obj <- add_metadata(obj,meta_path)
-    } else {
-        
-    }
-    meta_path <- paste0(meta_dir,'clusters_obj-type-',obj_type,'_resolution-',resolution,'_num-pcs-',pcs,'.tsv')
-    if(load_meta) {
         obj <- add_metadata(obj,meta_path)
     }
     obj <- add_metadata(obj,meta_path)
