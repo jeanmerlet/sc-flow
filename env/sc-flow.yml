@@ -1,4 +1,4 @@
-name: frontier_seurat
+name: sc-flow
 channels:
   - bioconda
   - conda-forge
@@ -301,4 +301,3 @@ dependencies:
   - xz=5.2.6=h166bdaf_0
   - zlib=1.2.13=hd590300_5
   - zstd=1.5.2=h3eb15da_6
-prefix: /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/sc-flow_test-env

@@ -22,15 +22,14 @@ suppressPackageStartupMessages(library(dplyr))
 
 # Violin plot
 
-violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_dir,plot_name,width,height) {
+violin_plot <- function(metadata,xvar,yvar,xlab,ylab,color_by,mito_cutoff,plot_dir,plot_name,width,height) {
 
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
 	metadata[[yvar]] <- as.numeric(metadata[[yvar]])
 	if (color_by != 'none') {
-		plot <- plot + ggplot(data = metadata,aes_string(x = xvar,y = yvar,color = condition,fill = condition)) + scale_fill_discrete(name = "Condition") + scale_color_discrete(name = "Condition")
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar),y = !!sym(yvar),color = !!sym(color_by),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by) + scale_color_discrete(name = color_by)
 	} else {
-        
-        plot <- ggplot(data=metadata, aes(x=!!sym(xvar), y=!!sym(yvar)))
+		plot <- ggplot(data = metadata, aes(x = !!sym(xvar), y = !!sym(yvar)))
 	}
 	plot <- plot +
 		geom_violin() +
@@ -47,12 +46,15 @@ violin_plot <- function(metadata,xvar,yvar,xlab,ylab,condition,mito_cutoff,plot_
 
 # Bar plot
 
-bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,height) {
+bar_plot <- function(metadata,xvar,xlab,ylab,color_by,split_by,plot_dir,plot_name,width,height) {
 	metadata[[xvar]] <- as.factor(metadata[[xvar]])
-	if(condition) {
-		plot <- plot + ggplot(data = metadata,aes(x = xvar,fill = condition)) + facet_grid(.~condition,scales = "free") + scale_fill_discrete(name = "Condition")
+	if(color_by != 'none') {
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar),fill = !!sym(color_by))) + scale_fill_discrete(name = color_by)
 	} else {
-        plot <- ggplot(data=metadata, aes(x=!!sym(xvar)))
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar)))
+	}
+	if(split_by != 'none') {
+		plot <- plot + facet_grid(as.formula(paste("~",split_by)),scales = "free")
 	}
 	plot <- plot +
 		geom_bar() +
@@ -64,7 +66,7 @@ bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,
 			axis.ticks.y = element_blank()
 		) +
 		xlab(xlab) +
-        ylab(ylab)
+        	ylab(ylab)
 	ggsave(paste0(plot_dir,plot_name),plot = plot,width = width,height = height)
 
 }
@@ -72,17 +74,17 @@ bar_plot <- function(metadata,xvar,xlab,ylab,condition,plot_dir,plot_name,width,
 
 # Density plot
 
-density_plot <- function(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plot_name,width,height) {
-	if(condition) {
-		plot <- plot + ggplot(data = metadata,aes(x = xvar,color = condition)) + scale_color_discrete(name = "Condition")
+density_plot <- function(metadata,xvar,xlab,ylab,color_by,split_by,plot_dir,plot_name,width,height) {
+	if(color_by != 'none') {
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar),color = !!sym(color_by))) + scale_color_discrete(name = color_by)
 	} else {
-        plot <- ggplot(data=metadata, aes(x=!!sym(xvar)))
+		plot <- ggplot(data = metadata,aes(x = !!sym(xvar)))
+	}
+	plot <- plot + geom_density() + scale_x_log10(labels = comma)
+	if(split_by != 'none') {
+		plot <- plot + facet_wrap(as.formula(paste("~",split_by)))
 	}
 	plot <- plot +
-		geom_density() +
-		scale_x_log10(labels = comma) +
-        facet_wrap(as.formula(paste("~", split_by))) +
-		#facet_wrap(!!sym(split_by)~.) +
 		theme(strip.text.y = element_text(angle = 0)) +
 		xlab(xlab) +
 		ylab(ylab)
@@ -92,8 +94,7 @@ density_plot <- function(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plo
 
 # Qc plot workflow
 
-plot_qc <- function(metadata, condition, mito_cutoff,
-                    plot_dir, width, height) {
+plot_qc <- function(meta_dir,mito_cutoff,plot_dir,width,height) {
     xvar <- 'sample_ids'
     yvar <- 'Mito'
     meta_path <- paste0(meta_dir, 'cell_meta_filtered.tsv')
@@ -102,23 +103,30 @@ plot_qc <- function(metadata, condition, mito_cutoff,
     xlab <- 'Mitochondrial expression (%)'
     ylab <- 'Sample IDs'
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', yvar, '_yvar-', xvar, '.png')
-    violin_plot(metadata, xvar, yvar, xlab, ylab, condition, mito_cutoff,
-                plot_dir, plot_name, width, height)
+    print("running violin plot")
+    violin_plot(metadata, xvar, yvar, xlab, ylab, color_by, mito_cutoff,plot_dir, plot_name, width, height)
+    print("violin plot complete")
     xlab <- 'Sample IDs'
     ylab <- ''
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-total-cells.png')
-    bar_plot(metadata, xvar, xlab, ylab, condition, plot_dir, plot_name, width, height)
+    print("running bar plot")
+    bar_plot(metadata, xvar, xlab, ylab, color_by, split_by,plot_dir, plot_name, width, height)
+    print("bar chart complete")
     split_by <- 'sample_ids'
     xvar <- 'nCount_RNA'
     xlab <- 'Total UMIs per cell'
     ylab <- 'Density'
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
-    density_plot(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plot_name,width,height)
+    print("running density plot (total UMI)")
+    density_plot(metadata,xvar,xlab,ylab,color_by,split_by,plot_dir,plot_name,width,height)
+    print("density plot (total UMI) complete")
     xvar <- 'nFeature_RNA'
     xlab <- 'Unique Genes per cell'
     ylab <- 'Density'
+    print("running density plot (total genes)")
     plot_name <- paste0(plot_type, '_cell-meta-filtered', '_xvar-', xvar, '_yvar-density.png')
-    density_plot(metadata,xvar,xlab,ylab,split_by,condition,plot_dir,plot_name,width,height)
+    density_plot(metadata,xvar,xlab,ylab,color_by,split_by,plot_dir,plot_name,width,height)
+    print("density plot (total genes) complete")
 }
 
 
@@ -164,16 +172,21 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     } else {
         split_name <- '_'
     }
-    plot_name <- paste0('umap', color_name, split_name, 'obj-type-', obj_type, '_pcs-', pcs,
-                        '_res-', res, '_min-dist-', min_dist, '_nn-', nn, '.png')
+    plot_name <- paste0(
+        'umap',color_name,split_name,
+        'obj-type-',obj_type,
+        '_pcs-',pcs,
+        '_res-', res,
+        '_min-dist-',min_dist,
+        '_nn-',nn,
+        '.png')
 	ggsave(paste0(plot_dir, 'cells/', plot_name), plot = plot,width = width,height = height)
 }
 
 
 # DEG volcano plot
-plot_volcano <- function(deg_dir, plot_dir, diff_type, p_value, p_cutoff, log2fc, top_n_genes,
-                         width, height) {
-    degs_path <- paste0(deg_dir, 'degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
+plot_volcano <- function(de_dir, plot_dir, diff_type, p_value, p_cutoff, log2fc, top_n_genes,width, height) {
+    degs_path <- paste0(de_dir, 'degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
     degs <- read.table(degs_path, sep='\t', header=TRUE, row.names=1)
     # add significance column
     degs <- degs %>% mutate(
@@ -188,16 +201,16 @@ plot_volcano <- function(deg_dir, plot_dir, diff_type, p_value, p_cutoff, log2fc
         )
     ) %>% data.frame()
     # add labels for most significant genes in each lineage
-    labels <- do.call("rbind",lapply(unique(degs[[diff_type]]),function(x){
-        up <- degs[degs[[diff_type]] == x & degs$significance == "up-regulated",]
+    labels <- do.call("rbind",lapply(unique(degs[["clusters"]]),function(x){
+        up <- degs[degs[["clusters"]] == x & degs$significance == "up-regulated",]
         up <- up[order(up$avg_log2FC,up$p_val_adj,decreasing = c(TRUE,FALSE)),][1:top_n_genes,]
-        down <- degs[degs[[diff_type]] == x & degs$significance == "down-regulated",]
+        down <- degs[degs[["clusters"]] == x & degs$significance == "down-regulated",]
         down <- down[order(down$avg_log2FC,down$p_val_adj,decreasing = c(FALSE,FALSE)),][1:top_n_genes,]
         return(rbind(up,down))
     }))
     plot <- ggplot(data = degs,aes(x = avg_log2FC,y = -log10(p_val_adj),col = significance)) +
         geom_point(size = 0.8) +
-        facet_wrap(as.formula(paste("~", diff_type)), scales = "free") +
+        facet_wrap(as.formula(paste("~clusters")), scales = "free") +
         scale_color_manual(values = c("down-regulated" = "blue","non-significant" = "black","up-regulated" = "red")) +
         geom_vline(xintercept = c(-log2fc, log2fc),col = "black",linetype = "dashed") +
         geom_hline(yintercept = -log10(p_cutoff),col = "black",linetype = "dashed") +
@@ -207,8 +220,13 @@ plot_volcano <- function(deg_dir, plot_dir, diff_type, p_value, p_cutoff, log2fc
         guides(color = guide_legend(override.aes = list(alpha = 1,size = 4)))+
         labs(x = expression(log[2](FC))) +
         labs(y = expression(-log[10](adj. ~ p-value)))
-    plot_name <- paste0('volcano_diff-type-', diff_type, '_min-l2fc-', log2fc, '_p-value-',
-                        p_value, '_p-cutoff-', p_cutoff, '_top-', top_n_genes, '-genes.png')
+    plot_name <- paste0(
+        'volcano_diff-type-',diff_type,
+        '_min-l2fc-',log2fc,
+        '_p-value-',p_value,
+        '_p-cutoff-',p_cutoff,
+        '_top-',top_n_genes,
+        '-genes.png')
 	ggsave(paste0(plot_dir, 'de/', plot_name), plot = plot,width = width,height = height)
     warnings()
 }
