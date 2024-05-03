@@ -242,6 +242,11 @@ option_list <- list(
 opt <- parse_args(OptionParser(option_list=option_list))
 run_r <- opt$run_r
 workflow <- opt$workflow
+genome_dir <- opt$genome_dir
+bc_whitelist <- opt$bc_whitelist
+bc_length <- opt$bc_length
+umi_start <- opt$umi_start
+umi_length <- opt$umi_length
 out_impute_dir <- opt$out_impute_dir
 obj_path <- opt$obj_path
 species <- opt$species
@@ -301,22 +306,19 @@ script <- c(
     "#!/bin/bash",
     "",
     "#SBATCH -A syb111",
-    paste0("#SBATCH -N ",num_paired_files), # take raw_dir and calculate
+    paste0("#SBATCH -N ",num_paired_files),  #take raw_dir and calculate
     "#SBATCH -t 6:00:00",
     "#SBATCH -J fastqc",
     "#SBATCH --mem=0",
     "#SBATCH -o ./scripts/alignment/logs/fastqc.%J.out",
     "#SBATCH -e ./scripts/alignment/logs/fastqc.%J.err",
     "",
-    "module load python",
-    paste0("echo fastqc_bin: ",fastqc), # placeholder
-    "echo",
-    paste0("srun -n ",num_files," python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",raw_dir," ",fastqc_out_dir), # placeholders
-    "",
     "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
     "conda activate sc-flow",
     "",
-    paste0("srun -N 1 -n 1 multiqc ",fastqc_out_dir," -n fastqc_report.html -o ",fastqc_out_dir," --no-data-dir") # add path to raw_dir, qc_dir, and raw_args
+    paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",raw_dir," ",fastqc_out_dir),  #placeholders
+    "",
+    paste0("srun -N 1 -n 1 multiqc ",fastqc_out_dir," -n fastqc_report.html -o ",fastqc_out_dir," --no-data-dir")  #add path to raw_dir, qc_dir, and raw_args
     )
     out_path <- "./scripts/jobs/fastqc.sbatch"
     out_paths <- c(out_path)
@@ -333,17 +335,14 @@ script <- c(
     "#SBATCH -o ./scripts/alignment/logs/align.%J.out",
     "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
     "",
-    "module load python",
-    paste0("echo star_bin: ",star), # placeholder 
-    "echo",
-    paste0("srun -n ",num_paired_files,"python ./scripts/alignment/mpi_align.py ",raw_args), # placeholders
-    "",
     "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
     "conda activate sc-flow",
     "",
-    paste0("mv ",bam_dir,"/*Log*.out",bam_dir,"/logs"), # placeholders
-    paste0("srun -N 1 -n 1 multiqc ",bam_dir,"/logs -n align_report.html -o ",qc_dir," --no-data-dir"), # placeholders
-    paste0("mv ",bam_dir,"/*Solo.out ",mtx_dir) # placeholders
+    paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 /lustre/orion/syb111/proj-shared/Tools/frontier/anaconda3/envs/sc-flow/bin/python ./scripts/alignment/mpi_align.py ",paste0(raw_args,collapse = " ")),
+    "",
+    paste0("mv ",bam_dir,"*Log*.out ",bam_dir,"logs"),
+    paste0("srun -N 1 -n 1 multiqc ",bam_dir,"logs -n align_report.html -o ",qc_dir," --no-data-dir"),
+    paste0("mv ",bam_dir,"*Solo.out ",mtx_dir) # placeholders
     )
     out_path <- "./scripts/jobs/align.sbatch"
     out_paths <- c(out_paths,out_path)
@@ -495,10 +494,12 @@ if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
 
 
 if (!run_r) {
-    raw_args <- paste0(raw_args, ' --run_r')
+    if(workflow != 'align') {
+        raw_args <- paste0(raw_args, ' --run_r')
+    } else {
+        raw_args <- c(star,raw_dir,bam_dir,genome_dir,bc_whitelist,bc_length,umi_start,umi_length)
+    }
     if (workflow == 'align') {
-        raw_args <- check_species(raw_args,mito_cutoff)
-        raw_args <- c(star,raw_dir,bam_dir,raw_args)
         job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
         raw_args <- check_species(raw_args,mito_cutoff)
@@ -525,7 +526,7 @@ if (!run_r) {
 	}
         job_paths <- write_diff_exp_job(raw_args)
     }
-    # submit the job from the command line
+     submit the job from the command line
     for (path in job_paths) {
         submit_job(path)
     }
