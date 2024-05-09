@@ -526,7 +526,7 @@ if (!run_r) {
 	}
         job_paths <- write_diff_exp_job(raw_args)
     }
-     submit the job from the command line
+     #submit the job from the command line
     for (path in job_paths) {
         submit_job(path)
     }
