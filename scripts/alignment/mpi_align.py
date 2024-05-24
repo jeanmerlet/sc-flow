@@ -12,10 +12,8 @@ bc_length = sys.argv[6]
 umi_start = sys.argv[7]
 umi_len = sys.argv[8]
 
-#TODO: option for reverse stranded reads
-
 # alignment function
-def sc_star_align(fastq1, fastq2, prefix, genome_dir, bc_whitelist, bc_length, umi_start, umi_len):
+def sc_star_align(fastq1, fastq2, prefix, genome_dir, bc_whitelist, bc_length, umi_start, umi_len, strandedness):
     out_prefix = os.path.join(out_dir, prefix + '_')
     subprocess.run([star_bin,
                     '--runThreadN', '16',
@@ -33,6 +31,7 @@ def sc_star_align(fastq1, fastq2, prefix, genome_dir, bc_whitelist, bc_length, u
                     '--soloUMIfiltering', 'MultiGeneUMI_CR',
                     '--clipAdapterType', 'CellRanger4',
                     '--outFilterScoreMin', '30',
+                    '--readStrand', strandedness,
                     '--readFilesCommand', 'zcat',
                     '--readFilesIn', fastq2, fastq1,
                     '--outFileNamePrefix', out_prefix,
