@@ -5,6 +5,7 @@ suppressWarnings(suppressPackageStartupMessages({
 }))
 # /gpfs/alpine/syb105/proj-shared/Personal/atown/Libraries/Andes/Anaconda3/envs/deseq2_andes
 # /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/frontier/frontier_seurat
+# /lustre/orion/syb111/proj-shared/Tools/frontier/anaconda3/envs/mentor
 
 raw_args <- paste0(commandArgs(trailingOnly = TRUE),collapse=' ')
 
@@ -336,7 +337,7 @@ script <- c(
     "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
     "",
     "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
-    "conda activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/andes_mpi4py",
+    "conda activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py",
     "",
     paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_align.py ",paste0(raw_args,collapse = " ")),
     "",
