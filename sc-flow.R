@@ -4,7 +4,7 @@ suppressWarnings(suppressPackageStartupMessages({
     library(future)
 }))
 # /lustre/orion/syb111/proj-shared/Tools/frontier/anaconda3/envs/mentor <- main env
-# /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py" <- align env
+# /lustre/orion/syb111/proj-shared/Tools/frontier/conda_envs/andes_mpi4py <- align env
 
 raw_args <- paste0(commandArgs(trailingOnly = TRUE),collapse=' ')
 
@@ -320,7 +320,7 @@ script <- c(
     "#SBATCH -e ./scripts/alignment/logs/fastqc.%J.err",
     "",
     "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
-    "conda activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py",
+    "conda activate /lustre/orion/syb111/proj-shared/Tools/frontier/conda_envs/andes_mpi4py",
     "",
     paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",raw_dir," ",fastqc_out_dir),  #placeholders
     "",
@@ -342,7 +342,7 @@ script <- c(
     "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
     "",
     "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
-    "conda activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py",
+    "conda activate /lustre/orion/syb111/proj-shared/Tools/frontier/conda_envs/andes_mpi4py",
     "",
     paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_align.py ",paste0(raw_args,collapse = " ")),
     "",
