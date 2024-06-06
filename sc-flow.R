@@ -1,12 +1,12 @@
-# Libraries
 suppressWarnings(suppressPackageStartupMessages({
     library(optparse)
     library(future)
 }))
-# /lustre/orion/syb111/proj-shared/Tools/frontier/anaconda3/envs/mentor <- main env
-# /lustre/orion/syb111/proj-shared/Tools/andes/conda_envs/andes_mpi4py <- align env
 
-raw_args <- paste0(commandArgs(trailingOnly = TRUE),collapse=' ')
+# /lustre/orion/syb111/proj-shared/Tools/frontier/anaconda3/envs/mentor <- main env
+# /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py <- align env
+
+raw_args <- paste0(commandArgs(trailingOnly = TRUE), collapse=' ')
 
 plan('multicore',workers = 8)
 options(future.rng.onMisuse = "ignore")
@@ -15,7 +15,7 @@ options(future.globals.maxSize = 100 * 1024^3)
 raw_dir <- './data/raw/'
 fastqc <- '/lustre/orion/syb111/proj-shared/Tools/frontier/FastQC/fastqc'
 qc_dir <- './qc/'
-fastqc_out_dir <- paste0(qc_dir,'reads')
+fastqc_out_dir <- paste0(qc_dir, 'reads')
 star <- '/lustre/orion/syb111/proj-shared/Tools/frontier/STAR-2.7.9a/bin/Linux_x86_64/STAR'
 bam_dir <- './data/bam/'
 mtx_dir <- './data/count-matrices/'
@@ -40,6 +40,24 @@ option_list <- list(
         type='character',
         default=NULL,
         help='what kind of workflow to run'
+    ),
+    make_option(
+        c('--index_out_dir'),
+        type='character',
+        default=NULL,
+        help='full dir path to write star reference genome index to'
+    ),
+    make_option(
+        c('--index_fasta_path'),
+        type='character',
+        default=NULL,
+        help='full path to ref genome fasta file for star indexing'
+    ),
+    make_option(
+        c('--index_gtf_path'),
+        type='character',
+        default=NULL,
+        help='full path to ref genome annotation file for star indexing'
     ),
     make_option(
         c('--genome_dir'),
@@ -76,6 +94,13 @@ option_list <- list(
         type='character', 
         default='Forward',
         help='library strandedness type for STAR'
+    ),
+    make_option(
+        c('--compressed'),
+        type='logical',
+        action='store_true',
+        default=FALSE,
+        help='whether fastqs are compressed (for alignment)'
     ),
     make_option(
         c('--obj_path'),
@@ -253,6 +278,8 @@ bc_whitelist <- opt$bc_whitelist
 bc_length <- opt$bc_length
 umi_start <- opt$umi_start
 umi_length <- opt$umi_length
+strandedness <- opt$strandedness
+compressed <- opt$compressed
 out_impute_dir <- opt$out_impute_dir
 obj_path <- opt$obj_path
 species <- opt$species
@@ -279,6 +306,9 @@ log2fc <- opt$log2fc
 top_n_genes <- opt$top_n_genes
 p_cutoff <- opt$p_cutoff
 load_meta <- opt$load_meta
+index_out_dir <- opt$index_out_dir
+index_fasta_path <- opt$index_fasta_path
+index_gtf_path <- opt$index_gtf_path
 
 
 # error functions
@@ -305,75 +335,104 @@ check_species <- function (raw_args, mito_cutoff) {
 
 
 ### jobscripts ###
+write_index_job <- function(raw_args) {
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A syb111",
+        "#SBATCH -N 1",
+        "#SBATCH -t 12:00:00",
+        "#SBATCH -J index",
+        "#SBATCH -o ./scripts/alignment/logs/index.%J.out",
+        "#SBATCH -e ./scripts/alignment/logs/index.%J.err",
+        "#SBATCH --mem=0",
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
+        "conda activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py",
+        "echo starting...",
+        "",
+        paste0("srun -n 1 -c 16 python ./scripts/alignment/star_index.py ",
+               paste0(raw_args, collapse=" ")),
+        "echo done!"
+    )
+    out_path <- "./scripts/jobs/index.sbatch"
+    write.table(script, file=out_path, sep="\n", row.names=FALSE,
+                col.names=FALSE, quote=FALSE)
+    return(c(out_path))
+}
+
+
 write_align_jobs <- function(raw_args) {
-num_files <- length(list.files(raw_dir))
-num_paired_files <- num_files/2
-script <- c(
-    "#!/bin/bash",
-    "",
-    "#SBATCH -A syb111",
-    paste0("#SBATCH -N ",num_paired_files),  #take raw_dir and calculate
-    "#SBATCH -t 6:00:00",
-    "#SBATCH -J fastqc",
-    "#SBATCH --mem=0",
-    "#SBATCH -o ./scripts/alignment/logs/fastqc.%J.out",
-    "#SBATCH -e ./scripts/alignment/logs/fastqc.%J.err",
-    "",
-    "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
-    "conda activate /lustre/orion/syb111/proj-shared/Tools/andes/conda_envs/andes_mpi4py",
-    "",
-    paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",raw_dir," ",fastqc_out_dir),  #placeholders
-    "",
-    paste0("srun -N 1 -n 1 multiqc ",fastqc_out_dir," -n fastqc_report.html -o ",fastqc_out_dir," --no-data-dir")  #add path to raw_dir, qc_dir, and raw_args
+    num_files <- length(list.files(raw_dir))
+    num_paired_files <- num_files/2
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A syb111",
+        paste0("#SBATCH -N ",num_paired_files),  #take raw_dir and calculate
+        "#SBATCH -t 6:00:00",
+        "#SBATCH -J fastqc",
+        "#SBATCH --mem=0",
+        "#SBATCH -o ./scripts/alignment/logs/fastqc.%J.out",
+        "#SBATCH -e ./scripts/alignment/logs/fastqc.%J.err",
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
+        "conda activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py",
+        "",
+        paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_fastqc.py ",fastqc," ",raw_dir," ",fastqc_out_dir),  #placeholders
+        "",
+        paste0("srun -N 1 -n 1 multiqc ",fastqc_out_dir," -n fastqc_report.html -o ",fastqc_out_dir," --no-data-dir")  #add path to raw_dir, qc_dir, and raw_args
     )
     out_path <- "./scripts/jobs/fastqc.sbatch"
     out_paths <- c(out_path)
-    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
+    write.table(script, file=out_path, sep="\n", row.names=FALSE,
+                col.names=FALSE, quote=FALSE)
 
-script <- c(
-    "#!/bin/bash",
-    "",
-    "#SBATCH -A SYB111",
-    paste0("#SBATCH -N ",num_paired_files), # take raw_dir and calculate
-    "#SBATCH -t 6:00:00",
-    "#SBATCH -J STAR_align",
-    "#SBATCH --mem=0",
-    "#SBATCH -o ./scripts/alignment/logs/align.%J.out",
-    "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
-    "",
-    "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
-    "conda activate /lustre/orion/syb111/proj-shared/Tools/andes/conda_envs/andes_mpi4py",
-    "",
-    paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_align.py ",paste0(raw_args,collapse = " ")),
-    "",
-    paste0("mv ",bam_dir,"*Log*.out ",bam_dir,"logs"),
-    paste0("srun -N 1 -n 1 multiqc ",bam_dir,"logs -n align_report.html -o ",qc_dir," --no-data-dir"),
-    paste0("mv ",bam_dir,"*Solo.out ",mtx_dir) # placeholders
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A SYB111",
+        paste0("#SBATCH -N ",num_paired_files), # take raw_dir and calculate
+        "#SBATCH -t 6:00:00",
+        "#SBATCH -J STAR_align",
+        "#SBATCH --mem=0",
+        "#SBATCH -o ./scripts/alignment/logs/align.%J.out",
+        "#SBATCH -e ./scripts/alignment/logs/align.%J.err",
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/andes/load_anaconda.sh",
+        "conda activate /lustre/orion/syb111/proj-shared/Personal/jmerlet/envs/conda/andes/mpi4py",
+        "",
+        paste0("srun -N ",num_paired_files," -n ",num_paired_files," -c 16 python ./scripts/alignment/mpi_align.py ",paste0(raw_args,collapse = " ")),
+        "",
+        paste0("mv ",bam_dir,"*Log*.out ",bam_dir,"logs"),
+        paste0("srun -N 1 -n 1 multiqc ",bam_dir,"logs -n align_report.html -o ",qc_dir," --no-data-dir"),
+        paste0("mv ",bam_dir,"*Solo.out ",mtx_dir) # placeholders
     )
     out_path <- "./scripts/jobs/align.sbatch"
     out_paths <- c(out_paths,out_path)
-    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
+    write.table(script, file=out_path, sep="\n", row.names=FALSE,
+                col.names=FALSE, quote=FALSE)
     return(out_paths)
 }
 
 
 #TODO: calculate time needed
 write_preprocess_job <- function(raw_args) {
-script <- c(
-    "#!/bin/bash",
-    "",
-    "#SBATCH -A SYB111",
-    "#SBATCH -N 1",
-    "#SBATCH -t 2:00:00",
-    "#SBATCH --mem=0",
-    "#SBATCH -J preprocess",
-    "#SBATCH -o ./scripts/preprocess/logs/preprocess.%J.out",
-    "#SBATCH -e ./scripts/preprocess/logs/preprocess.%J.err",
-    "",
-    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
-    "conda activate sc-flow",
-    "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A SYB111",
+        "#SBATCH -N 1",
+        "#SBATCH -t 2:00:00",
+        "#SBATCH --mem=0",
+        "#SBATCH -J preprocess",
+        "#SBATCH -o ./scripts/preprocess/logs/preprocess.%J.out",
+        "#SBATCH -e ./scripts/preprocess/logs/preprocess.%J.err",
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+        "conda activate sc-flow",
+        "",
+        paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- "./scripts/jobs/preprocess.sbatch"
     write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
@@ -383,21 +442,21 @@ script <- c(
 
 #TODO: calculate time needed
 write_impute_job <- function(raw_args) {
-script <- c(
-    "#!/bin/bash",
-    "",
-    "#SBATCH -A SYB111",
-    "#SBATCH -N 1",
-    "#SBATCH -t 2:00:00",
-    "#SBATCH -J impute",
-    "#SBATCH --mem=0",
-    "#SBATCH -o ./scripts/preprocess/logs/impute.%J.out",
-    "#SBATCH -e ./scripts/preprocess/logs/impute.%J.err",
-    "",
-    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
-    "conda activate sc-flow",
-    "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A SYB111",
+        "#SBATCH -N 1",
+        "#SBATCH -t 2:00:00",
+        "#SBATCH -J impute",
+        "#SBATCH --mem=0",
+        "#SBATCH -o ./scripts/preprocess/logs/impute.%J.out",
+        "#SBATCH -e ./scripts/preprocess/logs/impute.%J.err",
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+        "conda activate sc-flow",
+        "",
+        paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- "./scripts/jobs/impute.sbatch"
     write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
@@ -407,21 +466,21 @@ script <- c(
 
 #TODO: calculate time needed
 write_cluster_job <- function(raw_args) {
-script <- c(
-    "#!/bin/bash",
-    "",
-    "#SBATCH -A SYB111",
-    "#SBATCH -N 1",
-    "#SBATCH -t 2:00:00",
-    "#SBATCH -J cluster",
-    "#SBATCH --mem=0",
-    "#SBATCH -o ./scripts/seurat/logs/cluster.%J.out",
-    "#SBATCH -e ./scripts/seurat/logs/cluster.%J.err",
-    "",
-    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
-    "conda activate sc-flow",
-    "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A SYB111",
+        "#SBATCH -N 1",
+        "#SBATCH -t 2:00:00",
+        "#SBATCH -J cluster",
+        "#SBATCH --mem=0",
+        "#SBATCH -o ./scripts/seurat/logs/cluster.%J.out",
+        "#SBATCH -e ./scripts/seurat/logs/cluster.%J.err",
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+        "conda activate sc-flow",
+        "",
+        paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- "./scripts/jobs/cluster.sbatch"
     write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
@@ -431,55 +490,53 @@ script <- c(
 
 #TODO: calculate time needed
 write_plot_job <- function(raw_args) {
-script <- c(
-    "#!/bin/bash",
-    "",
-    "#SBATCH -A SYB111",
-    "#SBATCH -N 1",
-    "#SBATCH -t 1:00:00",
-    paste0("#SBATCH -J plot_",plot_type),
-    "#SBATCH --mem=0",
-    paste0("#SBATCH -o ./scripts/plots/logs/plot_",plot_type,".%J.out"),
-    paste0("#SBATCH -e ./scripts/plots/logs/plot_",plot_type,".%J.err"),
-    "",
-    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
-    "conda activate sc-flow",
-    "",
-    paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A SYB111",
+        "#SBATCH -N 1",
+        "#SBATCH -t 1:00:00",
+        paste0("#SBATCH -J plot_",plot_type),
+        "#SBATCH --mem=0",
+        paste0("#SBATCH -o ./scripts/plots/logs/plot_",plot_type,".%J.out"),
+        paste0("#SBATCH -e ./scripts/plots/logs/plot_",plot_type,".%J.err"),
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+        "conda activate sc-flow",
+        "",
+        paste0("srun -n 1 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- paste0("./scripts/jobs/plot_",plot_type,".sbatch")
-    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
+    write.table(script, file=out_path, sep="\n", row.names=FALSE,
+                col.names = FALSE,quote = FALSE)
     return(c(out_path))
-}
-
-submit_job <- function(path) {
-    command <- paste0('sbatch ',path)
-    system(command)
 }
 
 
 #TODO: calculate time needed
 write_diff_exp_job <- function(raw_args) {
-script <- c(
-    "#!/bin/bash",
-    "",
-    "#SBATCH -A SYB111",
-    "#SBATCH -N 1",
-    "#SBATCH --mem=0",
-    "#SBATCH -t 4:00:00",
-    paste0("#SBATCH -J diff-exp_",diff_type),
-    paste0("#SBATCH -o ./scripts/seurat/logs/diff-exp_",diff_type,".%J.out"),
-    paste0("#SBATCH -e ./scripts/seurat/logs/diff-exp_",diff_type,".%J.err"),
-    "",
-    "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
-    "conda activate sc-flow",
-    "",
-    paste0("srun -n 1 -c 8 Rscript ./sc-flow.R ",raw_args)
+    script <- c(
+        "#!/bin/bash",
+        "",
+        "#SBATCH -A SYB111",
+        "#SBATCH -N 1",
+        "#SBATCH --mem=0",
+        "#SBATCH -t 4:00:00",
+        paste0("#SBATCH -J diff-exp_",diff_type),
+        paste0("#SBATCH -o ./scripts/seurat/logs/diff-exp_",diff_type,".%J.out"),
+        paste0("#SBATCH -e ./scripts/seurat/logs/diff-exp_",diff_type,".%J.err"),
+        "",
+        "source /lustre/orion/syb111/proj-shared/Tools/frontier/load_anaconda.sh",
+        "conda activate sc-flow",
+        "",
+        paste0("srun -n 1 -c 8 Rscript ./sc-flow.R ",raw_args)
     )
     out_path <- paste0("./scripts/jobs/diff-exp_",diff_type,".sbatch")
-    write.table(script,file = out_path,sep = "\n",row.names = FALSE,col.names = FALSE,quote = FALSE)
+    write.table(script, file=out_path, sep="\n", row.names=FALSE,
+                col.names=FALSE, quote=FALSE)
     return(c(out_path))
 }
+
 
 submit_job <- function(path) {
     command <- paste0('sbatch ',path)
@@ -488,9 +545,9 @@ submit_job <- function(path) {
 
 
 ### WORKFLOW ###
-valid_workflow_list <- c('align','preprocess','plot','impute','cluster','diff_exp')
-valid_plot_type_list <- c('qc','umap','volcano')
-valid_diff_type_list <- c('cluster','condition')
+valid_workflow_list <- c('index', 'align', 'preprocess', 'plot', 'impute', 'cluster', 'diff_exp')
+valid_plot_type_list <- c('qc', 'umap', 'volcano')
+valid_diff_type_list <- c('cluster', 'condition')
 
 
 if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
@@ -500,15 +557,19 @@ if (is.null(workflow) | !(workflow %in% valid_workflow_list)) {
 
 
 if (!run_r) {
-    if(workflow != 'align') {
-        raw_args <- paste0(raw_args, ' --run_r')
+    if(workflow == 'index') {
+        raw_args <- c(star, index_out_dir, index_fasta_path, index_gtf_path)
+    } else if (workflow == 'align') {
+        raw_args <- c(star,raw_dir,bam_dir,genome_dir,bc_whitelist,bc_length,umi_start,umi_length,strandedness)
     } else {
-        raw_args <- c(star,raw_dir,bam_dir,genome_dir,bc_whitelist,bc_length,umi_start,umi_length)
+        raw_args <- paste0(raw_args, ' --run_r')
     }
-    if (workflow == 'align') {
+    if (workflow == 'index') {
+        job_paths <- write_index_job(raw_args)
+    } else if (workflow == 'align') {
         job_paths <- write_align_jobs(raw_args)
     } else if (workflow == 'preprocess') {
-        raw_args <- check_species(raw_args,mito_cutoff)
+        raw_args <- check_species(raw_args, mito_cutoff)
         job_paths <- write_preprocess_job(raw_args)
     } else if (workflow == 'impute') {
         job_paths <- write_impute_job(raw_args)

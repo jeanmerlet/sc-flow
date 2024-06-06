@@ -11,10 +11,14 @@ bc_whitelist = sys.argv[5]
 bc_length = sys.argv[6]
 umi_start = sys.argv[7]
 umi_len = sys.argv[8]
+strandedness = sys.argv[9]
+compressed = sys.argv[10]
 
 # alignment function
-def sc_star_align(fastq1, fastq2, prefix, genome_dir, bc_whitelist, bc_length, umi_start, umi_len, strandedness):
+def sc_star_align(fastq1, fastq2, prefix, genome_dir, bc_whitelist, bc_length,
+                  umi_start, umi_len, strandedness, compressed):
     out_prefix = os.path.join(out_dir, prefix + '_')
+    read_cmd = 'zcat' if compressed else '-'
     subprocess.run([star_bin,
                     '--runThreadN', '16',
                     '--genomeDir', genome_dir,
@@ -31,8 +35,8 @@ def sc_star_align(fastq1, fastq2, prefix, genome_dir, bc_whitelist, bc_length, u
                     '--soloUMIfiltering', 'MultiGeneUMI_CR',
                     '--clipAdapterType', 'CellRanger4',
                     '--outFilterScoreMin', '30',
-                    '--readStrand', strandedness,
-                    '--readFilesCommand', 'zcat',
+                    '--soloStrand', strandedness,
+                    '--readFilesCommand', read_cmd,
                     '--readFilesIn', fastq2, fastq1,
                     '--outFileNamePrefix', out_prefix,
                     '--outSAMtype', 'BAM', 'SortedByCoordinate'])
@@ -57,7 +61,9 @@ for i, pair in enumerate(paired_fastq_list):
     if i % size != rank: continue
     fastq_path1, fastq_path2 = pair
     head, fastq = os.path.split(fastq_path1)
-    prefix = re.search('(.*)[rR][12].*', fastq).groups()[0]
+    # match everything except a number followed by .fastq
+    prefix = re.search(r'(.*)[0-9]\.fastq.*', fastq).groups()[0]
     if prefix[-1] == '_': prefix = prefix[:-1]
     print(f'{prefix} (task number {i}) being aligned by {rank} of {size}')
-    sc_star_align(fastq_path1, fastq_path2, prefix, genome_dir, bc_whitelist, bc_length, umi_start, umi_len)
+    sc_star_align(fastq_path1, fastq_path2, prefix, genome_dir, bc_whitelist, bc_length,
+                  umi_start, umi_len, strandedness, compressed)
