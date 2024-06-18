@@ -7,8 +7,6 @@ fastqc_bin = sys.argv[1]
 data_dir = sys.argv[2]
 out_dir = sys.argv[3]
 
-#fastqc_bin = '/gpfs/alpine/syb105/proj-shared/Personal/jmerlet/rna-seq_tools/fastqc/fastqc'
-
 # get list of fastq paths
 fastq_paths = [os.path.join(data_dir, path) for path in os.listdir(data_dir)]
 

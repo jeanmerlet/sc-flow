@@ -560,7 +560,9 @@ if (!run_r) {
     if(workflow == 'index') {
         raw_args <- c(star, index_out_dir, index_fasta_path, index_gtf_path)
     } else if (workflow == 'align') {
-        raw_args <- c(star,raw_dir,bam_dir,genome_dir,bc_whitelist,bc_length,umi_start,umi_length,strandedness)
+        raw_args <- c(star, raw_dir, bam_dir, genome_dir, bc_whitelist,
+                      bc_length, umi_start, umi_length, strandedness,
+                      compressed)
     } else {
         raw_args <- paste0(raw_args, ' --run_r')
     }
