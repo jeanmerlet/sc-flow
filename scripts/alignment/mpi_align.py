@@ -18,7 +18,7 @@ compressed = sys.argv[10]
 def sc_star_align(fastq1, fastq2, prefix, genome_dir, bc_whitelist, bc_length,
                   umi_start, umi_len, strandedness, compressed):
     out_prefix = os.path.join(out_dir, prefix + '_')
-    read_cmd = 'zcat' if compressed else '-'
+    read_cmd = 'zcat' if compressed == 'TRUE' else '-'
     subprocess.run([star_bin,
                     '--runThreadN', '16',
                     '--genomeDir', genome_dir,

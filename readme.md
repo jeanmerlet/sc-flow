@@ -38,7 +38,6 @@ Each of these corresponds to an argument for the ```--workflow``` command in the
 10. ```Rscript sc-flow.R --workflow diff_exp --diff_type condition``` (NOT YET IMPLEMENTED)
 
 
-## NOTE: fix qc plots to accept color\_by instead of condition and look at split\_by for density plots
-## NOTE: implement diff\_exp by condition, change diff\_type cluster to clusters
 ## NOTE: talk about interactivity with ```--run\_r```
 ## ANOTHER NOTE: make sure ```--run\_r``` works with some weird species options stuff for preprocess / qc plot
+## NOTE: tell users where there data is located (especially for plots, count matrices, etc.)

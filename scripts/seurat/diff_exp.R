@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 
 options(future.globals.maxSize = 100000 * 1024^2,future.rng.onMisue = "ignore")
 
-run_diff_exp <- function(obj, de_dir, diff_type, condition_group, p_value) {
+run_diff_exp <- function(obj, res, de_dir, diff_type, condition_group, p_value) {
     start_time <- Sys.time()
     Idents(obj) <- obj@meta.data$clusters
     obj <- FindVariableFeatures(obj)
@@ -29,9 +29,11 @@ run_diff_exp <- function(obj, de_dir, diff_type, condition_group, p_value) {
 	return(markers)
     }
     markers <- markers %>% filter(p_val_adj < p_value) %>% arrange(clusters, desc(avg_log2FC)) %>% data.frame()
-    filename <- paste0('degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
+    #filename <- paste0('degs_diff-type-', diff_type, '_p-value-', p_value, '.tsv')
+    filename <- paste0('degs_diff-type-', diff_type, '_p-value-', p_value, '_res-', res, '.tsv')
     out_path <- paste0(de_dir, filename)
-    write.table(markers, out_path, sep='\t', row.names=TRUE, col.names=TRUE, quote=FALSE)
+    # row.names false because there is a gene col
+    write.table(markers, out_path, sep='\t', row.names=FALSE, col.names=TRUE, quote=FALSE)
     print(paste0('Differential expression runtime: ', difftime(Sys.time(), start_time, unit='mins')))
 }
 
@@ -51,5 +53,5 @@ diff_exp <- function(meta_dir,resolution,pcs,use_integrated,de_dir,diff_type,con
         obj <- add_metadata(obj,meta_path)
     }
     obj <- add_metadata(obj,meta_path)
-    run_diff_exp(obj,de_dir,diff_type,condition_group,p_value)
+    run_diff_exp(obj,res,de_dir,diff_type,condition_group,p_value)
 }
