@@ -309,6 +309,7 @@ load_meta <- opt$load_meta
 index_out_dir <- opt$index_out_dir
 index_fasta_path <- opt$index_fasta_path
 index_gtf_path <- opt$index_gtf_path
+condition_group <- opt$condition_group
 
 
 # error functions
@@ -406,7 +407,7 @@ write_align_jobs <- function(raw_args) {
         "",
         paste0("mv ",bam_dir,"*Log*.out ",bam_dir,"logs"),
         paste0("srun -N 1 -n 1 multiqc ",bam_dir,"logs -n align_report.html -o ",qc_dir," --no-data-dir"),
-        paste0("mv ",bam_dir,"*Solo.out ",mtx_dir) # placeholders
+        paste0("mv ", bam_dir, "*Solo.out ", mtx_dir)
     )
     out_path <- "./scripts/jobs/align.sbatch"
     out_paths <- c(out_paths,out_path)

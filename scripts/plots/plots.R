@@ -151,6 +151,9 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     metadata <- read.table(metadata_path, sep='\t', header=TRUE)
     umap_coords$sample_ids <- metadata$sample_ids
     umap_coords$condition <- metadata$condition
+    if (color_by == 'cluster_labels') {
+        umap_coords$cluster_labels <- metadata$cluster_labels
+    }
     if (color_by == 'none') {
         plot <- ggplot(data = umap_coords, aes(x = UMAP_1, y = UMAP_2))
         color_name <- ''
