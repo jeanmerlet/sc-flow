@@ -21,9 +21,14 @@ run_diff_exp <- function(obj, res, de_dir, diff_type, condition_group, p_value) 
         cl <- makeCluster(8)
         registerDoParallel(cl)
         markers <- foreach(clust = sort(unique(obj$clusters)),.packages = c("Seurat")) %dopar% {
-            cluster_markers <- FindMarkers(obj, ident.1 = condition_group, group.by = "condition",subset.ident = clust)
-            cluster_markers$gene <- rownames(cluster_markers)
-            cluster_markers$clusters <- clust
+            cond1 <- unique(obj@meta.data$condition)[1]
+            cond2 <- unique(obj@meta.data$condition)[2]
+            if (sum(obj[,obj@meta.data$clusters == clust]@meta.data$condition == cond1) > 0 &
+              sum(obj[,obj@meta.data$clusters == clust]@meta.data$condition == cond2) > 0) {
+                cluster_markers <- FindMarkers(obj, ident.1=condition_group, group.by="condition", subset.ident=clust)
+                cluster_markers$gene <- rownames(cluster_markers)
+                cluster_markers$clusters <- clust
+            }
             return(cluster_markers)
         }
         stopCluster(cl)
@@ -49,6 +54,6 @@ diff_exp <- function(meta_dir,resolution,pcs,use_integrated,de_dir,diff_type,con
         obj_type <- 'preprocessed'
     }
     meta_path <- paste0(meta_dir,'clusters_obj-type-',obj_type,'_resolution-',resolution,'_num-pcs-',pcs,'.tsv')
-    obj <- add_metadata(obj,meta_path)
-    run_diff_exp(obj,resolution,de_dir,diff_type,condition_group,p_value)
+    obj <- add_metadata(obj, meta_path)
+    run_diff_exp(obj, resolution, de_dir, diff_type, condition_group, p_value)
 }
