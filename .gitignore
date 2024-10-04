@@ -26,3 +26,6 @@ data/
 *.jpeg
 *.pdf
 *.svg
+
+# text editors
+*.swp
