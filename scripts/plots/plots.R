@@ -132,7 +132,7 @@ plot_qc <- function(meta_dir,mito_cutoff,plot_dir,width,height) {
 
 # Umap plot workflow and plotting
 
-plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, min_dist, nn, color_by, split_by) {
+plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, min_dist, nn, color_by, split_by, use_annotated) {
     if (integrated) {
         obj_type <- 'integrated'
     } else {
@@ -141,7 +141,8 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     umap_coords_path <- paste0(meta_dir, 'umap_pcs-', pcs, '_min-dist-', min_dist, '_nn-', nn, '.tsv')
     umap_coords <- read.table(umap_coords_path, sep='\t', header=TRUE)
     if (color_by == 'clusters' | split_by == 'clusters') {
-        clusters_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type, '_resolution-', res, '_num-pcs-', pcs, '.tsv')
+        clusters_path <- paste0(meta_dir, 'clusters_obj-type-', obj_type,
+                                '_resolution-', res, '_num-pcs-', pcs, '.tsv')
         clusters <- read.table(clusters_path, sep='\t', header=TRUE)
         umap_coords$clusters <- factor(clusters$clusters, levels=sort(unique(clusters$clusters)))
     }
@@ -151,9 +152,12 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     metadata <- read.table(metadata_path, sep='\t', header=TRUE)
     umap_coords$sample_ids <- metadata$sample_ids
     umap_coords$condition <- metadata$condition
-    if (color_by == 'cluster_labels') {
-        umap_coords$cluster_labels <- metadata$cluster_labels
-    }
+    #if (color_by == 'cluster_labels') {
+    #    umap_coords$cluster_labels <- metadata$cluster_labels
+    #}
+    #if (use_annotated) {
+    #    umap_coords$clusters <- metadata$cluster_la
+    #}
     if (color_by == 'none') {
         plot <- ggplot(data = umap_coords, aes(x = UMAP_1, y = UMAP_2))
         color_name <- ''
@@ -175,8 +179,13 @@ plot_umap <- function(meta_dir, plot_dir, width, height, pcs, res, integrated, m
     } else {
         split_name <- '_'
     }
+    if (use_annotated) {
+        annot_name <- '_annotated'
+    } else {
+        annot_name <- ''
+    }
     plot_name <- paste0(
-        'umap',color_name,split_name,
+        'umap', annot_name, color_name, split_name,
         'obj-type-',obj_type,
         '_pcs-',pcs,
         '_res-', res,

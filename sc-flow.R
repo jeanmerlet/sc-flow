@@ -266,6 +266,13 @@ option_list <- list(
         type='character',
         default=NULL,
         help='group level for the condition variable'
+    ),
+    make_option(
+        c('--use_annotated'),
+        type='logical',
+        action='store_true',
+        default=FALSE,
+        help='whether to use cluster label names instead of numbers (if available)'
     )
 )
 
@@ -310,6 +317,7 @@ index_out_dir <- opt$index_out_dir
 index_fasta_path <- opt$index_fasta_path
 index_gtf_path <- opt$index_gtf_path
 condition_group <- opt$condition_group
+use_annotated <- opt$use_annotated
 
 
 # error functions
@@ -622,12 +630,12 @@ if (!run_r) {
         } else if (plot_type == 'umap') {
             source('./scripts/seurat/umap.R')
             gen_umap(meta_dir,pcs,min_dist,nn,use_integrated)
-            plot_umap(meta_dir,plot_dir,width,height,pcs,resolution,use_integrated,min_dist,nn,color_by,split_by)
+            plot_umap(meta_dir,plot_dir,width,height,pcs,resolution,use_integrated,min_dist,nn,color_by,split_by, use_annotated)
         } else if (plot_type == 'volcano') {
             plot_volcano(de_dir,plot_dir,diff_type,p_value,p_cutoff,log2fc,top_n_genes,width,height)
         }
     } else if (workflow == 'diff_exp') {
         source('./scripts/seurat/diff_exp.R') 
-        diff_exp(meta_dir,resolution,pcs,use_integrated,de_dir,diff_type,condition_group,p_value)
+        diff_exp(meta_dir,resolution,pcs,use_integrated,de_dir,diff_type,condition_group,p_value, use_annotated)
     }
 }
