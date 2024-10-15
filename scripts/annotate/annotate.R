@@ -19,11 +19,9 @@ add_cluster_labels <- function(labels_path, cell_meta_path, clusters_path) {
 }
 
 
-add_cluster_labels_new <- function(labels_path, cell_meta_path, clusters_path) {
+add_cluster_labels_new <- function(labels_path, clusters_path) {
     # read labels
     labels <- read.table(labels_path, sep='\t', header=TRUE, row.names=1)
-    # read cell_meta
-    cell_meta <- read.table(cell_meta_path, sep='\t', header=TRUE, row.names=1)
     # read clusters
     clusters <- read.table(clusters_path, sep='\t', header=TRUE, row.names=1)
     # add labels to clusters
